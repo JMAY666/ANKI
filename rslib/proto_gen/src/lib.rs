@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::env;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
@@ -280,5 +281,56 @@ pub fn descriptors_path() -> PathBuf {
         PathBuf::from(path)
     } else {
         PathBuf::from(env::var("OUT_DIR").unwrap()).join("../../anki_descriptors.bin")
+    }
+}
+
+/// Make a path relative to a base directory when they share an ancestor.
+/// Callers must normalize both paths first. This keeps Unicode checkout names
+/// out of protoc's Windows command-line arguments without changing the output.
+pub fn relative_path(path: &Path, base: &Path) -> PathBuf {
+    for (parents, ancestor) in base.ancestors().enumerate() {
+        if let Ok(suffix) = path.strip_prefix(ancestor) {
+            let mut relative = PathBuf::new();
+            for _ in 0..parents {
+                relative.push("..");
+            }
+            relative.push(suffix);
+            return relative;
+        }
+    }
+    path.to_path_buf()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn relative_path_omits_shared_unicode_checkout() {
+        let root = Path::new("workspace/中文项目");
+        let base = root.join("rslib/proto");
+        let output = root.join("out/rust/debug/build/anki_proto/out/descriptors.tmp");
+
+        assert_eq!(
+            relative_path(&output, &base),
+            Path::new("../../out/rust/debug/build/anki_proto/out/descriptors.tmp")
+        );
+    }
+
+    #[test]
+    fn relative_path_preserves_child_and_same_directory_targets() {
+        let base = Path::new("workspace/中文项目");
+        assert_eq!(
+            relative_path(&base.join("descriptors.tmp"), base),
+            Path::new("descriptors.tmp")
+        );
+        assert_eq!(relative_path(base, base), Path::new(""));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn relative_path_preserves_absolute_target_on_another_drive() {
+        let output = Path::new(r"D:\build\descriptors.tmp");
+        assert_eq!(relative_path(output, Path::new(r"C:\checkout")), output);
     }
 }

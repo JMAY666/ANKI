@@ -10,6 +10,7 @@ use anki_io::read_file;
 use anki_io::write_file_if_changed;
 use anki_proto_gen::add_must_use_annotations;
 use anki_proto_gen::determine_if_message_is_empty;
+use anki_proto_gen::relative_path;
 use anyhow::Context;
 use anyhow::Result;
 use prost_reflect::DescriptorPool;
@@ -19,7 +20,17 @@ pub fn write_rust_protos(descriptors_path: PathBuf) -> Result<DescriptorPool> {
     let proto_dir = PathBuf::from("../../proto");
     let paths = gather_proto_paths(&proto_dir)?;
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let tmp_descriptors = out_dir.join("descriptors.tmp");
+    // protoc on Windows misinterprets Unicode in absolute command-line paths.
+    // Rust can still write generated sources to the original OUT_DIR.
+    let protoc_out_dir = if cfg!(windows) {
+        relative_path(
+            &out_dir.canonicalize()?,
+            &env::current_dir()?.canonicalize()?,
+        )
+    } else {
+        out_dir.clone()
+    };
+    let tmp_descriptors = protoc_out_dir.join("descriptors.tmp");
     prost_build::Config::new()
         .out_dir(&out_dir)
         .file_descriptor_set_path(&tmp_descriptors)

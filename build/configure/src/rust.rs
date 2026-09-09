@@ -122,7 +122,10 @@ fn build_proto_descriptors_and_interfaces(build: &mut Build) -> Result<()> {
     build.add_action(
         "rslib:proto",
         CargoBuild {
-            inputs: inputs![glob!["{proto,rslib/proto}/**"], ":protoc_binary",],
+            inputs: inputs![
+                glob!["{proto,rslib/proto,rslib/proto_gen}/**"],
+                ":protoc_binary",
+            ],
             outputs: &outputs,
             target: None,
             extra_args: "-p anki_proto",
