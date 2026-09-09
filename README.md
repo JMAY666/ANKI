@@ -19,6 +19,14 @@ Want to contribute to Anki? Check out the [Contribution Guidelines](./docs/contr
 
 For more information on building and developing, please see [Development](./docs/development.md).
 
+#### Repository workflow
+
+Follow [AGENTS.md](./AGENTS.md) and the existing [CLAUDE.md](./CLAUDE.md) instructions
+for checks, Git review, and local commits. Local commits do not authorize a push;
+review every outgoing commit, including files deleted later in that history,
+before an authorized push. Keep relevant documentation in the same commit as the
+change, and review the GitHub About description after a successful push.
+
 #### Contributors
 
 The following people have contributed to Anki: [CONTRIBUTORS](./CONTRIBUTORS)
