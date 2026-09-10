@@ -136,6 +136,8 @@ CK_KEY_OPENAI = _PFX + "key_openai"
 CK_KEY_GEMINI = _PFX + "key_gemini"
 CK_KEY_OR     = _PFX + "key_openrouter"
 CK_KEY_ANTH   = _PFX + "key_anthropic"
+CK_KEY_DEEPSEEK = _PFX + "key_deepseek"
+CK_MODEL_DEEPSEEK = _PFX + "model_deepseek"
 CK_OLLAMA_EP  = _PFX + "ollama_endpoint"
 CK_OLLAMA_MDL = _PFX + "ollama_model"
 CK_LLAMA_EP   = _PFX + "llama_endpoint"
@@ -201,7 +203,7 @@ else:
 # ══════════════════════════════════════════════════════════════════════════════
 
 _SECRET_KEYS = frozenset({
-    CK_KEY_OPENAI, CK_KEY_GEMINI, CK_KEY_OR, CK_KEY_ANTH, CK_KEY_LLAMA,
+    CK_KEY_OPENAI, CK_KEY_GEMINI, CK_KEY_OR, CK_KEY_ANTH, CK_KEY_LLAMA, CK_KEY_DEEPSEEK,
 })
 
 
@@ -307,20 +309,23 @@ def _cfg_set(key: str, value: Any) -> None:
         except Exception as e:
             print(f"AI Assistant: config write error for '{key}': {e}")
 
-def _load_settings() -> Dict[str, Any]:
-    provider = _cfg_get(CK_PROVIDER, "openai")
+def _load_settings(provider: Optional[str] = None) -> Dict[str, Any]:
+    provider = provider or _cfg_get(CK_PROVIDER, "openai")
     key_map  = {
         "openai":     _cfg_get(CK_KEY_OPENAI, ""),
         "gemini":     _cfg_get(CK_KEY_GEMINI, ""),
         "openrouter": _cfg_get(CK_KEY_OR,     ""),
         "anthropic":  _cfg_get(CK_KEY_ANTH,   ""),
+        "deepseek":   _cfg_get(CK_KEY_DEEPSEEK, ""),
     }
     current_key    = key_map.get(provider, "")
     ollama_ep      = _cfg_get(CK_OLLAMA_EP, OLLAMA_EP_DEFAULT)
     ollama_model   = _cfg_get(CK_OLLAMA_MDL, "")
     llama_ep       = _cfg_get(CK_LLAMA_EP, LLAMA_EP_DEFAULT)
     llama_model    = _cfg_get(CK_LLAMA_MDL, "")
-    if provider == "ollama":
+    if provider == "deepseek":
+        effective_model = _cfg_get(CK_MODEL_DEEPSEEK, "deepseek-flash")
+    elif provider == "ollama":
         effective_model = ollama_model
     elif provider == "llamaserver":
         effective_model = llama_model
@@ -366,7 +371,10 @@ def _save_settings_dict(data: Dict[str, Any]) -> None:
     _cfg_set(CK_OLLAMA_EP,  ollama_ep)
     _cfg_set(CK_LLAMA_EP,   llama_ep)
 
-    if provider == "ollama":
+    if provider == "deepseek":
+        _cfg_set(CK_MODEL_DEEPSEEK, model or "deepseek-flash")
+        _cfg_set(CK_KEY_DEEPSEEK, api_key)
+    elif provider == "ollama":
         if model:
             _cfg_set(CK_OLLAMA_MDL, model)
     elif provider == "llamaserver":
@@ -523,6 +531,7 @@ def _stream_openai_compat(
     timeout: int = 60,
     on_reasoning: Optional[Callable[[str], None]] = None,
     token_param: str = "max_tokens",
+    extra_body: Optional[Dict[str, Any]] = None,
 ) -> None:
     """OpenAI-compatible streaming (also used for OpenRouter & llama.cpp server).
 
@@ -531,9 +540,12 @@ def _stream_openai_compat(
     deprecated there), while OpenRouter and llama.cpp keep ``max_tokens``.
     """
     print(f"AI Assistant: streaming OpenAI-compat url={url.split('/')[2]}, model={model}")
-    payload = json.dumps({
+    body = {
         "model": model, "messages": messages, token_param: 2048, "stream": True,
-    }).encode("utf-8")
+    }
+    if extra_body:
+        body.update(extra_body)
+    payload = json.dumps(body).encode("utf-8")
     headers: Dict[str, str] = {"Content-Type": "application/json"}
     # API key is optional for self-hosted OpenAI-compatible servers (e.g. a
     # llama.cpp server started without --api-key). Only send auth when present.
@@ -698,7 +710,7 @@ def _run_js(code: str) -> None:
     """Run JS in the webview (must be called from the main thread)."""
     global _webview
     if not _webview:
-        print(f"AI Assistant: _run_js called but webview is None. code: {code[:60]}")
+        print("AI Assistant: _run_js called but webview is None.")
         return
     try:
         page = _webview.page()
@@ -794,6 +806,14 @@ def _run_api_in_thread(settings: Dict[str, Any], messages: List[Dict]) -> None:
                     # Official OpenAI endpoint: o-series/reasoning models reject
                     # "max_tokens"; "max_completion_tokens" works for all models.
                     token_param="max_completion_tokens",
+                )
+            elif provider == "deepseek":
+                _stream_openai_compat(
+                    "https://api.deepseek.com/chat/completions",
+                    api_key, model, messages, on_chunk,
+                    on_reasoning=on_reasoning,
+                    # Keep ordinary chat within the existing 2048-token budget.
+                    extra_body={"thinking": {"type": "disabled"}},
                 )
             elif provider == "gemini":
                 _stream_gemini(api_key, model, messages, on_chunk)
@@ -1102,6 +1122,7 @@ def _handle_action(action: str, data: Dict[str, Any]) -> None:
         "set_card_context": _action_set_card_context,
         "chip_action":   _action_chip,
         "save_settings": _action_save_settings,
+        "provider_settings": _action_provider_settings,
         "save_chips":    _action_save_chips,
         "check_ollama":  _action_check_ollama,
         "setup_ollama":  _action_setup_ollama,
@@ -1114,6 +1135,15 @@ def _handle_action(action: str, data: Dict[str, Any]) -> None:
         handler(data)
     else:
         print(f"AI Assistant: unknown action '{action}'")
+
+
+def _action_provider_settings(data: Dict[str, Any]) -> None:
+    provider = data.get("provider")
+    if provider not in ("openai", "gemini", "openrouter", "anthropic", "deepseek", "ollama", "llamaserver"):
+        return
+    settings = _load_settings(provider)
+    selected = {key: settings[key] for key in ("provider", "apiKey", "model")}
+    _run_js(f"receiveProviderSettings({json.dumps(selected)});")
 
 
 def _action_page_ready(_data: Dict[str, Any]) -> None:

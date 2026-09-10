@@ -1,7 +1,8 @@
 """Real Qt/Anki event-loop smoke test, exclusively against a synthetic profile.
 
 Rejects onboarding (never accepts terms); no production code or completion
-flags are patched. Uses application APIs, not native desktop automation.
+flags are patched. DeepSeek HTTP responses are synthetic; real API credentials
+are never used. Uses application APIs, not native desktop automation.
 """
 from pathlib import Path
 import importlib
@@ -10,13 +11,15 @@ import os
 import sys
 import time
 import traceback
+import hashlib
+import io
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = ROOT / "runtime" / "smoke-eventloop"
+BASE = ROOT / "runtime" / "smoke-1.5.1"
 MODE = sys.argv[1] if len(sys.argv) > 1 else "write"
 assert MODE in ("write", "restart")
 assert (BASE / "prefs21.db").exists()
-os.environ["ANKI_SINGLE_INSTANCE_KEY"] = "synapsepro-smoke-eventloop"
+os.environ["ANKI_SINGLE_INSTANCE_KEY"] = "synapsepro-smoke-1.5.1"
 os.environ["QT_QPA_PLATFORM"] = "windows"
 os.environ["PYTHONUTF8"] = "1"
 import aqt
@@ -28,11 +31,24 @@ started = time.monotonic()
 app = aqt._run(["anki", "-b", str(BASE), "-p", "SynapsePro-Test", "-l", "en_US"], exec=False)
 mw = aqt.mw
 addon = importlib.import_module("236979321")
-nb = importlib.import_module("236979321.notebook_sidebar")
+ai = importlib.import_module("236979321.ai_assistant")
 pomo = importlib.import_module("236979321.pomodoro")
-mm = importlib.import_module("236979321.mindmap_sidebar")
-NOTE = [{"id": "smoke-note", "title": "Synthetic smoke note", "content": "<p>Smoke persistence 2+2=4</p>"}]
-TODO = [{"id": "smoke-todo", "text": "Synthetic task", "completed": False}]
+retired = ("website_viewer_enabled", "notebook_enabled", "mindmap_enabled")
+legacy_paths = [BASE / "SynapsePro-Test" / n for n in ("notebook.sqlite", "mindmap_recovery.json", "mindmap_web_data/synthetic", "website_web_data/synthetic")]
+legacy_hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in legacy_paths}
+real_urlopen = ai.urllib.request.urlopen
+
+def synthetic_api(req, *args, **kwargs):
+    if getattr(req, "full_url", "") == "https://api.deepseek.com/chat/completions":
+        body = json.loads(req.data)
+        assert req.get_header("Authorization") == "Bearer synthetic-deepseek-key"
+        assert body["model"] == "synthetic-custom-model"
+        assert body["thinking"] == {"type": "disabled"}
+        results["api_request_verified"] = True
+        return io.BytesIO(b'data: {"choices":[{"delta":{"content":"Synthetic DeepSeek reply"}}]}\n' + b'data: [DONE]\n')
+    return real_urlopen(req, *args, **kwargs)
+
+ai.urllib.request.urlopen = synthetic_api
 
 def check(name, condition):
     results["checks"][name] = bool(condition)
@@ -47,6 +63,7 @@ def finish(error=None):
     done = True
     if error:
         results["errors"].append(str(error))
+    results["checks"]["legacy_data_unchanged"] = all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == h for p, h in legacy_hashes.items())
     results["elapsed_seconds"] = round(time.monotonic() - started, 2)
     results["passed"] = bool(results["checks"]) and all(results["checks"].values()) and not results["errors"]
     (BASE / f"result-{MODE}.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
@@ -120,15 +137,19 @@ def dashboard_loaded(text):
     addon.toggle_launcher_sidebar()
     check("launcher_restored", addon.launcher_dock_widget.isVisible() == initial)
     if MODE == "restart":
-        check("notebook_restart_persistence", json.loads(nb.load_latest_note()) == NOTE)
-        check("todo_restart_persistence", json.loads(nb.load_latest_todos()) == TODO)
+        check("deepseek_restart_settings", ai._load_settings()["provider"] == "deepseek" and ai._load_settings()["model"] == "synthetic-custom-model")
+        check("deepseek_restart_key", ai._load_settings()["apiKey"] == "synthetic-deepseek-key")
         check("review_restart_persistence", mw.col.db.scalar("select count(*) from revlog") >= 1)
         finish()
         return
-    check("notebook_write", nb.save_note(json.dumps(NOTE)))
-    check("notebook_read", json.loads(nb.load_latest_note()) == NOTE)
-    check("todo_write", nb.save_todos(json.dumps(TODO)))
-    check("todo_read", json.loads(nb.load_latest_todos()) == TODO)
+    check("removed_shortcuts", not set(retired) & set(addon.constants.SIDEBAR_SHORTCUT_KEYS))
+    # Even migrated configurations containing old shortcuts must not register them.
+    addon.sidebar_shortcuts.refresh(dict(addon.addon_settings, sidebar_shortcuts={key: "Ctrl+Alt+9" for key in retired}))
+    check("legacy_shortcuts_ignored", not addon.sidebar_shortcuts._registered)
+    check("removed_modules_not_loaded", all("236979321." + n not in sys.modules for n in ("website_sidebar", "notebook_sidebar", "mindmap_sidebar", "embedded_window")))
+    from aqt.qt import QAction, QPushButton
+    texts = [x.text() for x in mw.findChildren(QAction)] + [x.toolTip() for x in addon.sidebar_widget_instance.findChildren(QPushButton)]
+    check("menus_and_launcher_entries_removed", not any(any(label in t for label in ("Mind Map", "Notebook", "Website Viewer", "Search in Sidebar")) for t in texts))
     pomo.reset_action()
     pomo.start_pause_action()
     check("pomodoro_started", pomo.pomodoro_timer.isActive())
@@ -141,49 +162,70 @@ def timer_elapsed():
     check("pomodoro_paused", not pomo.pomodoro_timer.isActive())
     pomo.reset_action()
     check("pomodoro_reset", pomo.current_state == pomo.constants.STATE_IDLE)
-    nb.toggle_notebook_dock()
-    wait_for("notebook_page_loaded", lambda: nb._dock and nb._dock.widget()._page_ready, notebook_ready)
+    ai.toggle_ai_assistant_dock()
+    later(1200, ai_ready)
 
-def notebook_ready():
-    nb._dock.widget().web.page().runJavaScript("document.body.innerText", guard(notebook_dom))
 
-def notebook_dom(text):
-    check("notebook_dom_rendered", isinstance(text, str) and len(text) > 20)
-    mm.toggle_mindmap_dock()
-    later(4000, inspect_mindmap)
+def ai_ready():
+    ai._webview.page().runJavaScript("({ready:typeof _settingsProvider==='string',providers:Array.from(document.querySelectorAll('#s-provider option')).map(x=>x.value)})", guard(ai_options))
 
-def inspect_mindmap():
-    panel = mm.mindmap_dock.widget()
-    results["mindmap_diagnostics"] = dict(visible=mm.mindmap_dock.isVisible(), initialized=panel.is_initialized, ready=panel._page_ready, url=panel.web_view.url().toString() if panel.web_view else None)
-    results["checks"]["mindmap_page_loaded"] = panel._page_ready
-    if not panel._page_ready:
-        mm.toggle_mindmap_dock()
-        later(300, lambda: (mm.toggle_mindmap_dock(), later(2000, inspect_mindmap_retry)))
-        return
-    mindmap_ready()
 
-def inspect_mindmap_retry():
-    panel = mm.mindmap_dock.widget()
-    results["checks"]["mindmap_reopen_loaded"] = panel._page_ready
-    if panel.web_view:
-        mindmap_ready()
-    else:
-        mindmap_dom(None)
+def ai_options(data):
+    check("ai_webview_ready", data and data.get("ready"))
+    check("all_ai_providers_present", set(data["providers"]) == {"openai", "gemini", "openrouter", "anthropic", "ollama", "llamaserver", "deepseek"})
+    ai._webview.page().runJavaScript("document.getElementById('s-provider').value='openai';onProviderChange(false);document.getElementById('s-apikey').value='synthetic-other-key';document.getElementById('s-provider').value='deepseek';onProviderChange();document.getElementById('s-apikey').value", guard(provider_changed))
 
-def mindmap_ready():
-    mm.mindmap_dock.widget().web_view.page().runJavaScript("document.body.innerText", guard(mindmap_dom))
 
-def mindmap_dom(text):
-    results["mindmap_text"] = text[:200] if isinstance(text, str) else text
-    results["checks"]["mindmap_dom_rendered"] = isinstance(text, str) and len(text) > 20
-    mm.toggle_mindmap_dock()
-    # Close notebook before restoring exact backend persistence fixture.
-    nb._dock.widget().unload_content(guard(after_notebook_closed))
+def provider_changed(value):
+    check("provider_switch_clears_foreign_key", value == "")
+    later(300, save_ai)
 
-def after_notebook_closed(saved):
-    check("notebook_flush_on_close", saved)
-    check("notebook_fixture_saved", nb.save_note(json.dumps(NOTE)))
-    nb._dock.hide()
+
+def save_ai():
+    ai._webview.page().runJavaScript("document.getElementById('s-apikey').value='synthetic-deepseek-key';document.getElementById('s-model').value='synthetic-custom-model';saveSettings();", guard(lambda _: later(300, saved_ai)))
+
+
+def saved_ai():
+    check("ai_ui_settings_saved", ai._load_settings()["provider"] == "deepseek" and ai._load_settings()["model"] == "synthetic-custom-model")
+    check("ai_key_not_in_collection", ai.CK_KEY_DEEPSEEK not in mw.col.conf)
+    ai._webview.page().runJavaScript("document.getElementById('start-user-input').value='Synthetic test';trySendFromEmpty();", guard(lambda _: later(1200, stream_complete)))
+
+
+def stream_complete():
+    ai._webview.page().runJavaScript("({text:document.getElementById('chat').innerText,busy:busy})", guard(check_reply))
+
+
+def check_reply(data):
+    check("deepseek_request_payload", results.get("api_request_verified", False))
+    check("deepseek_stream_in_ui", data and 'Synthetic DeepSeek reply' in data['text'] and not data['busy'])
+    # Both native and HTML settings must omit removed tools.
+    native = addon.settings_dialog.SettingsDialog(addon.addon_settings, mw)
+    from aqt.qt import QCheckBox
+    labels = [w.text() for w in native.findChildren(QCheckBox)]
+    check("native_settings_removed", not any(x in labels for x in ('Mind Map','Notebook','Website Viewer')))
+    native.reject(); native.deleteLater()
+    from importlib import import_module
+    web_settings = import_module('236979321.web_settings_dialog')
+    check("settings_payload_removed", not set(retired) & set(web_settings._TOGGLE_KEYS))
+    global settings_test_dialog
+    settings_test_dialog = web_settings.WebSettingsDialog(addon.addon_settings, mw)
+    settings_test_dialog.show()
+    wait_for("web_settings_initialized", lambda: settings_test_dialog._injected, check_web_settings)
+
+
+def check_web_settings():
+    settings_test_dialog._view.page().runJavaScript("SIDE.map(x=>x[0])", guard(web_settings_result))
+
+
+def web_settings_result(keys):
+    check("web_settings_controls_removed", set(keys) == {"ai_assistant_enabled", "gamification_sidebar_enabled", "music_player_enabled", "pomodoro_enabled"})
+    settings_test_dialog.reject()
+    settings_test_dialog.deleteLater()
+    ai.toggle_ai_assistant_dock()
+    start_review()
+
+
+def start_review():
     did = mw.col.decks.id_for_name("SynapsePro-Synthetic-Test")
     note = mw.col.new_note(mw.col.models.by_name("Basic"))
     note["Front"], note["Back"] = "Synthetic smoke review: 3 + 3?", "6"
@@ -194,6 +236,7 @@ def after_notebook_closed(saved):
     wait_for("review_question_ready", lambda: mw.reviewer.card is not None and mw.reviewer.state == "question", answer)
 
 def answer():
+    check("old_pdf_link_no_error", addon.webview_did_receive_js_message(False, "pycmd:synapsepro:pdf:synthetic", mw.reviewer) == (True, None))
     mw.reviewer._showAnswer()
     check("review_answer_shown", mw.reviewer.state == "answer")
     mw.reviewer._answerCard(3)

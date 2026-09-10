@@ -1,6 +1,6 @@
 # SynapsePro 接手工作区
 
-本阶段仅获取、梳理和准备环境，未修改插件行为。后续修改目标为 `addon/`，不是同级 Anki 主程序仓库。
+当前本地版本为 **1.5.1-local**：AI 助手新增 DeepSeek API；移除网页查看器、笔记本（含待办/PDF）和思维导图，保留原有数据。修改目标为 `addon/`，不是同级 Anki 主程序仓库。以下“来源与基线”记录原始 1.5.0，当前修改详情和验证见 [本地版本报告](docs/RELEASE-1.5.1.md)。
 
 隔离测试启动器默认使用简体中文（`zh_CN`）。现有 manual 配置中的 SynapsePro 语言已设为中文（`zh`）；后续新配置使用插件的自动跟随 Anki 语言设置。
 
@@ -52,21 +52,27 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.lock.txt
 ./.venv/Scripts/python.exe scripts/inspect_source.py
 uv pip check --python .venv/Scripts/python.exe
 
-# 首次加载探针已准备过，无需重建 load-probe
+# 原版导入探针只供历史对照，不代表当前修改的验证
 ./.venv/Scripts/python.exe scripts/load_probe.py
 
 # 将审核后的新增插件文件明确纳入 Git，再打包
 ./.venv/Scripts/python.exe scripts/package.py
 ```
 
-打包输出 `dist/SynapsePro-1.5.0-local.ankiaddon`。可在**隔离测试 Anki**的 Tools → Add-ons → Install from file 中选择它，然后重启。包内 manifest 的 package 为 `SynapsePro1`，而通过 AnkiWeb ID 安装/测试复制使用 `236979321`；不要在同一配置中同时启用两份。验证手动安装包时创建不含复制插件的另一独立配置，或先在隔离插件管理器禁用 ID 副本。
+打包输出 `dist/SynapsePro-1.5.1-local.ankiaddon`。包内 manifest 的 package 为 `SynapsePro1`，而通过 AnkiWeb ID 安装/测试复制使用 `236979321`；不要在同一配置中同时启用两份。已有 manual 配置使用 `scripts/deploy_test.py manual` 更新（必须先退出 Anki），脚本会完整备份 profile，再只替换插件安装副本并校验 profile 数据哈希。无需再手动安装第二份插件。不要用 AnkiWeb 更新覆盖本地修改版。
 
 启动脚本始终传 `-b runtime/<name>`、`-p SynapsePro-Test` 和独立 `ANKI_SINGLE_INSTANCE_KEY`。不传 `--safemode`，因为它会禁用待测插件。测试配置不登录 AnkiWeb，已设置 `autoSync=False`、`syncMedia=False`、`syncKey=None`，只有合成测试牌组和一张 2+2 卡片。不要把正式导出、媒体或 API key 放入这里。
 
-首次引导需要本人审阅并决定是否同意条款；本阶段没有接受条款或发送引导统计。完成引导后依次验证：主界面与主题、侧栏开关、番茄钟、笔记/待办保存重启、思维导图保存重启、测试卡复习与统计/XP、计划与截止日期、PDF 合成文件制卡；最后按需验证联网 AI、网页、音乐。每项记录动作、预期、结果和日志，不能以窗口出现代替验收。
+首次引导需要本人审阅并决定是否同意条款；自动测试不会接受条款或发送引导统计。当前版本需验证主界面与主题、侧栏、番茄钟、复习与统计/XP、计划与截止日期、AI 和音乐。已移除功能不再作为可操作入口，但旧数据保留须校验。每项记录动作、预期、结果和日志，不能以窗口出现代替验收。
 
 测试回滚：退出测试进程，重新从原始包建立新 `runtime/<name>`；原测试目录保留备查。后续数据兼容测试须备份完整测试 profile（含 collection、媒体、SynapsePro_Data、笔记数据库和 WebEngine 存储）。不对现有工作目录执行自动清理或强制还原。
 
 详细结论见 [接手报告](docs/HANDOVER.md)，修改位置见 [结构说明](docs/ARCHITECTURE.md)。
 
-后续已补做 [真实事件循环冒烟测试](docs/SMOKE.md)：主界面、计时、笔记/待办存储、复习及重启持久化通过；思维导图页面初始化失败，整组测试保持失败状态，未修改原版功能。复现脚本为 `scripts/smoke_test.py`。
+原版历史验证见 [1.5.0 冒烟记录](docs/SMOKE.md)。当前 `scripts/smoke_test.py` 已更新为 1.5.1 的验收范围，结果见 [本地版本报告](docs/RELEASE-1.5.1.md)，不要把原版失败记录当作当前验收结果。
+
+## 使用 DeepSeek
+
+运行 `./scripts/launch-test.ps1 -RunName manual`，打开侧栏 AI 助手 → 设置 → 服务商 **DeepSeek**，填入自己的 API Key，选择 `deepseek-flash` 或输入账户支持的模型 ID，然后保存。API Key 只存储到当前 profile 的 `SynapsePro_Data/ai_secrets.json`，不要提交或分享该文件。其他服务商仍可选择，各自密钥保留。
+
+DeepSeek 使用普通聊天模式（`thinking.type=disabled`）和原有流式交互，无需增加 SDK。接口与默认模型依据 [DeepSeek 官方文档](https://api-docs.deepseek.com/)，模型名可手动调整。

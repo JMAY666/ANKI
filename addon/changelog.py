@@ -2,6 +2,10 @@
 """English changelog data rendered in the Settings dialog."""
 
 CHANGELOG = [
+    {"version": "1.5.1-local", "date": "September 2026", "items": [
+        {'tag': 'New', 'text': 'Added DeepSeek as an API provider with profile-local key storage and configurable models.'},
+        {'tag': 'Changed', 'text': 'Removed Website Viewer, Notebook and Mind Map; existing user data is retained.'},
+    ]},
     {
         "version": "1.5.0",
         "date": "August 2026",

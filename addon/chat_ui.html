@@ -400,6 +400,7 @@ body:not(.empty) #input-wrap{display:block}
         <option value="gemini">Google Gemini</option>
         <option value="openrouter">OpenRouter</option>
         <option value="anthropic">Anthropic Claude</option>
+        <option value="deepseek">DeepSeek</option>
         <option value="ollama">Ollama (Local)</option>
         <option value="llamaserver">llama.cpp Server (Local)</option>
       </select>
@@ -685,6 +686,7 @@ function sendToPython(action, data) {
 
 // ── Model lists ───────────────────────────────────────────────────────────────
 var MODELS = {
+  deepseek:   ['deepseek-flash'],
   openai:     ['gpt-5.4-mini','gpt-5.5','gpt-5.4','gpt-4o-mini','gpt-4o'],
   gemini:     ['gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-3.1-pro-preview','gemini-2.5-flash'],
   openrouter: [
@@ -1221,6 +1223,17 @@ var KEY_HELP = {
     url: 'https://openrouter.ai/keys',
     urlLabel: 'Open OpenRouter Key Page'
   },
+  deepseek: {
+    name: 'DeepSeek',
+    intro: 'Connect directly to the DeepSeek API with your own API key.',
+    steps: [
+      'Open the DeepSeek platform and create an API key.',
+      'Come back here and paste it into the API Key field, then press Save.'
+    ],
+    note: 'Select deepseek-flash or type a model ID supported by your account. API usage is billed by DeepSeek.',
+    url: 'https://platform.deepseek.com/api_keys',
+    urlLabel: 'Open DeepSeek Platform'
+  },
   anthropic: {
     name: 'Anthropic Claude',
     intro: 'Anthropic’s Claude models are great at clear, nuanced explanations. A key is created in the Anthropic Console.',
@@ -1284,9 +1297,33 @@ function closeKeyHelp() {
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
+var _settingsProvider = null;
+var _providerDrafts = {};
+function receiveProviderSettings(data) {
+  if (data.provider !== _settingsProvider || _providerDrafts[data.provider]) return;
+  var key = document.getElementById('s-apikey');
+  // Do not overwrite a key the user has already started entering.
+  if (!key.value) key.value = data.apiKey || '';
+  var model = document.getElementById('s-model');
+  var defaults = MODELS[data.provider] || [];
+  if ((!model.value || model.value === defaults[0]) && data.model) {
+    // Other cloud providers share a legacy model key. Never suggest a model
+    // from another provider when switching into a newly configured service.
+    if (data.provider === 'deepseek' || defaults.indexOf(data.model) !== -1)
+      model.value = data.model;
+  }
+}
 function onProviderChange(resetModel) {
   if (resetModel === undefined) resetModel = true;
   var prov     = document.getElementById('s-provider').value;
+  if (resetModel && _settingsProvider && _settingsProvider !== prov) {
+    _providerDrafts[_settingsProvider] = {
+      apiKey: document.getElementById('s-apikey').value,
+      model: document.getElementById('s-model').value
+    };
+    document.getElementById('s-apikey').value = '';
+  }
+  _settingsProvider = prov;
   var isOllama = prov === 'ollama';
   var isLlama  = prov === 'llamaserver';
   // Local providers don't require an API key; llama.cpp may use an optional one.
@@ -1315,6 +1352,15 @@ function onProviderChange(resetModel) {
     });
     if (resetModel && MODELS[prov] && MODELS[prov].length) inp.value = MODELS[prov][0];
     inp.placeholder = tr('Select or type a model...');
+  }
+  if (resetModel) {
+    var draft = _providerDrafts[prov];
+    if (draft) {
+      document.getElementById('s-apikey').value = draft.apiKey;
+      inp.value = draft.model;
+    } else {
+      sendToPython('provider_settings', {provider: prov});
+    }
   }
 }
 
@@ -1395,7 +1441,7 @@ function saveSettings() {
 function updateModelLabel() {
   var p = document.getElementById('s-provider').value;
   var m = document.getElementById('s-model').value || '';
-  var names = {openai:'OpenAI',gemini:'Gemini',openrouter:'OpenRouter',anthropic:'Anthropic',ollama:'Ollama',llamaserver:'llama.cpp'};
+  var names = {openai:'OpenAI',gemini:'Gemini',openrouter:'OpenRouter',anthropic:'Anthropic',deepseek:'DeepSeek',ollama:'Ollama',llamaserver:'llama.cpp'};
   var mn = m.split('/').pop();
   document.getElementById('model-label').textContent = (names[p] || p) + (mn ? ' · ' + mn : '');
 }

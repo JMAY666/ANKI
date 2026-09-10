@@ -173,9 +173,9 @@ _TOGGLE_KEYS = [
     "minimal_dashboard_enabled",
     "gamification_widgets_enabled", "study_plan_widget_enabled",
     "daily_fact_widget_enabled", "deadline_bar_enabled",
-    "statistics_widget_enabled", "deck_overview_enabled", "mindmap_enabled",
+    "statistics_widget_enabled", "deck_overview_enabled",
     "gamification_sidebar_enabled", "music_player_enabled", "pomodoro_enabled",
-    "ai_assistant_enabled", "website_viewer_enabled", "notebook_enabled",
+    "ai_assistant_enabled",
 ]
 
 

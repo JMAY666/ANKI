@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import shutil
 import sys
+import sqlite3
 
 ROOT = Path(__file__).resolve().parents[1]
 base = ROOT / "runtime" / (sys.argv[1] if len(sys.argv) > 1 else "manual")
@@ -37,4 +38,13 @@ assert col.decks.id_for_name("SynapsePro-Synthetic-Test") == did
 assert len(col.find_notes('deck:SynapsePro-Synthetic-Test')) == 1
 col.close()
 pm.db.close()
+if base.name == "smoke-1.5.1":
+    profile = base / "SynapsePro-Test"
+    with sqlite3.connect(profile / "notebook.sqlite") as db:
+        db.execute("CREATE TABLE notes (body TEXT)")
+        db.execute("INSERT INTO notes VALUES (?)", ('Synthetic legacy note',))
+    (profile / "mindmap_recovery.json").write_text('{"mindmaps": [{"title": "Synthetic old map"}]}')
+    for folder in ("mindmap_web_data", "website_web_data"):
+        (profile / folder).mkdir()
+        (profile / folder / "synthetic").write_bytes(b"Synthetic retained user storage")
 print(f"Prepared isolated profile and verified synthetic note persistence: {base}")

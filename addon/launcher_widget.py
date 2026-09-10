@@ -14,8 +14,8 @@ try:
 except ImportError as e:
     print(f"Launcher Widget CRITICAL ERROR: Failed to import constants or study_plan_trigger: {e}")
     class MockConstants:
-        icons_folder = "."; SIDEBAR_BG_COLOR_HEX="#FFFFFF"; BUTTON_HOVER_PRESSED_COLOR="#0071D3"; BUTTON_ACTIVE_BG_COLOR="#0071D3"; DEFAULT_TEXT_COLOR="#333333"; SEPARATOR_LINE_COLOR="#888888"; TIMER_LABEL_COLOR="#888888"; TIMER_BUTTON_HOVER_COLOR="#d0d0d0"; TIMER_BUTTON_PRESSED_COLOR="#b0b0b0"; SIDEBAR_WIDTH = 55; BUTTON_ICON_SIZE = 30; TIMER_BUTTON_ICON_SIZE = 18; BUTTON_BORDER_RADIUS = 8; LOGO_FILENAME = "logo.svg"; START_ICON_FILENAME = "start.svg"; PAUSE_ICON_FILENAME = "pause.svg"; RESET_ICON_FILENAME = "reset.svg"; SKIP_ICON_FILENAME = "skip.svg"; AI_TOOL_ICON_FILENAME = "ai_tool.svg"; WEBSITE_ICON_FILENAME = "website.svg"; NOTEBOOK_ICON_FILENAME = "notes.svg"; MINDMAP_ICON_FILENAME = "mindmap.svg"; GAME_ICON_FILENAME = "game.svg"; STUDY_PLAN_ICON_FILENAME = "study_plan.svg"; TIMER_ICON_FILENAME = "timer.svg"; MUSIC_ICON_FILENAME = "music.svg";
-        AI_ASSISTANT_DOCK_OBJECT_NAME = "AIAssistantSidebarDock_Integrated_v1"; WEBSITE_DOCK_OBJECT_NAME = "IntegratedWebsiteSidebarDock_Mobesa_v1"; NOTEBOOK_DOCK_OBJECT_NAME = "IntegratedNotebookSidebarDock_Mobesa_v1"; MINDMAP_DOCK_OBJECT_NAME = "IntegratedMindmapSidebarDock_Mobesa_v1"; HOSPITAL_GAME_DOCK_OBJECT_NAME = "hospitalClickerGameDock"; DEFAULT_POMODORO_CONFIG = {"work_minutes": 25}; STATE_IDLE = 0; STATE_WORK = 1; STATE_SHORT_BREAK = 2; STATE_LONG_BREAK = 3; STATE_PAUSED = 4; addon_package_name = "Study Suite Addon"; ADDON_VERSION = "Unknown Version"; INFO_IMAGE_FILENAME = "news-banner.png"; INFO_IMAGE_WIDTH = 200
+        icons_folder = "."; SIDEBAR_BG_COLOR_HEX="#FFFFFF"; BUTTON_HOVER_PRESSED_COLOR="#0071D3"; BUTTON_ACTIVE_BG_COLOR="#0071D3"; DEFAULT_TEXT_COLOR="#333333"; SEPARATOR_LINE_COLOR="#888888"; TIMER_LABEL_COLOR="#888888"; TIMER_BUTTON_HOVER_COLOR="#d0d0d0"; TIMER_BUTTON_PRESSED_COLOR="#b0b0b0"; SIDEBAR_WIDTH = 55; BUTTON_ICON_SIZE = 30; TIMER_BUTTON_ICON_SIZE = 18; BUTTON_BORDER_RADIUS = 8; LOGO_FILENAME = "logo.svg"; START_ICON_FILENAME = "start.svg"; PAUSE_ICON_FILENAME = "pause.svg"; RESET_ICON_FILENAME = "reset.svg"; SKIP_ICON_FILENAME = "skip.svg"; AI_TOOL_ICON_FILENAME = "ai_tool.svg"; GAME_ICON_FILENAME = "game.svg"; STUDY_PLAN_ICON_FILENAME = "study_plan.svg"; TIMER_ICON_FILENAME = "timer.svg"; MUSIC_ICON_FILENAME = "music.svg";
+        AI_ASSISTANT_DOCK_OBJECT_NAME = "AIAssistantSidebarDock_Integrated_v1"; HOSPITAL_GAME_DOCK_OBJECT_NAME = "hospitalClickerGameDock"; DEFAULT_POMODORO_CONFIG = {"work_minutes": 25}; STATE_IDLE = 0; STATE_WORK = 1; STATE_SHORT_BREAK = 2; STATE_LONG_BREAK = 3; STATE_PAUSED = 4; addon_package_name = "Study Suite Addon"; ADDON_VERSION = "Unknown Version"; INFO_IMAGE_FILENAME = "news-banner.png"; INFO_IMAGE_WIDTH = 200
     constants = MockConstants()
     class MockStudyPlanTrigger:
         trigger_study_plan_action = lambda: print("ERROR: Study Plan Trigger module failed to load.")
@@ -52,9 +52,9 @@ except ImportError:
 
 # --- Local Component Module Imports ---
 try:
-    from . import pomodoro, website_sidebar, background_music, ai_assistant, mindmap_sidebar, notebook_sidebar
+    from . import pomodoro, background_music, ai_assistant
 except ImportError as e:
-    pomodoro = website_sidebar = background_music = ai_assistant = mindmap_sidebar = notebook_sidebar = object()
+    pomodoro = background_music = ai_assistant = object()
 
 # --- Anki Imports ---
 if QWidget is not object:
@@ -73,7 +73,7 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QPushButton as PushButtonType, QWidget as WidgetType, QLabel as LabelType, QDockWidget as DockWidgetType
     from PyQt6.QtGui import QIcon as IconType
     from PyQt6.QtCore import QEvent as EventType, QObject as ObjectType
-    from . import pomodoro, website_sidebar, background_music, ai_assistant, mindmap_sidebar, notebook_sidebar
+    from . import pomodoro, background_music, ai_assistant
     from .study_plan_trigger import trigger_gamification_sidebar_action, trigger_study_plan_action
 
 
@@ -200,16 +200,12 @@ class SidebarWidget(QWidget):
 
         feature_map = {
             constants.AI_TOOL_ICON_FILENAME: ("ai_assistant_enabled", getattr(ai_assistant, 'toggle_ai_assistant_dock', None), constants.AI_ASSISTANT_DOCK_OBJECT_NAME),
-            constants.WEBSITE_ICON_FILENAME: ("website_viewer_enabled", getattr(website_sidebar, 'toggle_website_dock', None), constants.WEBSITE_DOCK_OBJECT_NAME),
-            constants.NOTEBOOK_ICON_FILENAME: ("notebook_enabled", getattr(notebook_sidebar, 'toggle_notebook_dock', None), constants.NOTEBOOK_DOCK_OBJECT_NAME),
-            constants.MINDMAP_ICON_FILENAME: ("mindmap_enabled", getattr(mindmap_sidebar, 'toggle_mindmap_dock', None), constants.MINDMAP_DOCK_OBJECT_NAME),
             constants.GAME_ICON_FILENAME: ("gamification_sidebar_enabled", getattr(study_plan_trigger, 'trigger_gamification_sidebar_action', None), "GamificationSidebar"),
             constants.STUDY_PLAN_ICON_FILENAME: ("study_plan_widget_enabled", getattr(study_plan_trigger, 'trigger_study_plan_action', None), None),
         }
         
         top_icon_definitions = [
-            (constants.AI_TOOL_ICON_FILENAME, _("Show/Hide AI Assistant")), (constants.WEBSITE_ICON_FILENAME, _("Show/Hide Website Viewer")),
-            (constants.NOTEBOOK_ICON_FILENAME, _("Show/Hide Notebook")), (constants.MINDMAP_ICON_FILENAME, _("Show/Hide Mind Map")),
+            (constants.AI_TOOL_ICON_FILENAME, _("Show/Hide AI Assistant")),
             (constants.GAME_ICON_FILENAME, _("Toggle Gamification Sidebar")),
             (constants.STUDY_PLAN_ICON_FILENAME, _("Configure Study Plan")),
         ]

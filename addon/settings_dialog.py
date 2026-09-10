@@ -678,8 +678,6 @@ class SettingsDialog(QDialog):
         )
 
         features = [
-            ("mindmap_enabled", _("Mind Map"),
-             _("A visual mind-mapping panel.")),
             ("gamification_sidebar_enabled", _("Gamification Sidebar"),
              _("Progress, rewards and motivation panel.")),
             ("music_player_enabled", _("Music Player"),
@@ -688,10 +686,6 @@ class SettingsDialog(QDialog):
              _("A focus timer with work and break intervals.")),
             ("ai_assistant_enabled", _("AI Assistant"),
              _("Chat assistant that can explain your cards.")),
-            ("website_viewer_enabled", _("Website Viewer"),
-             _("Open websites in a panel without leaving Anki.")),
-            ("notebook_enabled", _("Notebook"),
-             _("Notes, to-dos and PDFs alongside your cards.")),
         ]
         for key, text, desc in features:
             self.add_sidebar_setting(key, text, layout, desc)

@@ -706,3 +706,8 @@ _add_rows([
     ("Abstract Wallpaper", "Abstraktes Wallpaper", "Fondo abstracto", "추상 배경화면", "Papel de parede abstrato", "Fond d’écran abstrait", "Hình nền trừu tượng", "抽象壁纸", "अमूर्त वॉलपेपर"),
     ("A colorful abstract wallpaper suitable for either mode.", "Ein farbenfrohes abstraktes Wallpaper, das für beide Modi geeignet ist.", "Un fondo abstracto y colorido adecuado para ambos modos.", "두 모드 모두에 어울리는 다채로운 추상 배경화면입니다.", "Um papel de parede abstrato e colorido adequado para ambos os modos.", "Un fond d’écran abstrait et coloré adapté aux deux modes.", "Hình nền trừu tượng nhiều màu phù hợp với cả hai chế độ.", "适用于两种模式的彩色抽象壁纸。", "दोनों मोड के लिए उपयुक्त रंगीन अमूर्त वॉलपेपर।"),
 ])
+
+# Local release additions.
+WEB_TRANSLATIONS.update({'Connect directly to the DeepSeek API with your own API key.': {'zh': '使用你自己的 API Key，直接连接 DeepSeek API。'}, 'Open the DeepSeek platform and create an API key.': {'zh': '打开 DeepSeek 开放平台并创建 API Key。'}, 'Select deepseek-flash or type a model ID supported by your account. API usage is billed by DeepSeek.': {'zh': '选择 deepseek-flash，或输入你的账户支持的模型 ID。API 使用费用由 DeepSeek 收取。'}, 'Open DeepSeek Platform': {'zh': '打开 DeepSeek 开放平台'}, 'Added DeepSeek as an API provider with profile-local key storage and configurable models.': {'zh': '新增 DeepSeek API 服务商，密钥保存在本地用户配置中，模型可以自行设置。'}, 'Removed Website Viewer, Notebook and Mind Map; existing user data is retained.': {'zh': '移除网页查看器、笔记本和思维导图，已有用户数据予以保留。'}})
+
+WEB_TRANSLATIONS["The PDF viewer was removed. Your original files are preserved."] = {"zh": "PDF 查看器已移除，你原有的文件仍然保留。"}

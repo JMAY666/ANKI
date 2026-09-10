@@ -65,14 +65,8 @@ try:
     from . import mode
     from .launcher_widget import SidebarWidget
     from .pomodoro import init_pomodoro, cleanup_pomodoro
-    from .website_sidebar import cleanup_website_sidebar
     from .background_music import cleanup_music_player
     from .ai_assistant import cleanup_ai_assistant_sidebar
-    from .mindmap_sidebar import cleanup_mindmap_sidebar    
-    from .notebook_sidebar import (
-        cleanup_notebook_sidebar, setup_notebook_sidebar,
-        toggle_notebook_dock, open_pdf_review_link,
-    )
     from . import deck_overview, sidebar_shortcuts
     from . import statistics_widget, daily_widgets, minimal_dashboard, settings_dialog, custom_background
     from .gamification import GamificationManager, CMD_RESET_DATA, CMD_CLAIM_CHALLENGE, CMD_LP_START_PREFIX, CMD_LP_PAUSE_PREFIX
@@ -131,8 +125,7 @@ def get_default_settings() -> Dict[str, Any]:
         "deadline_bar_enabled": True, "statistics_widget_enabled": True,
         "deck_overview_enabled": True,
         "pomodoro_enabled": True, "ai_assistant_enabled": True,
-        "website_viewer_enabled": True, "notebook_enabled": True,
-        "mindmap_enabled": True, "gamification_sidebar_enabled": True,
+        "gamification_sidebar_enabled": True,
         "gamification_popups_enabled": True,
         "music_player_enabled": True, "stats_time_range": 7,
         "stats_consistency_days": 30,
@@ -555,13 +548,6 @@ def _refresh_ui_after_onboarding():
         except Exception:
             pass
 
-    # Website sidebar button colours
-    try:
-        from .website_sidebar import refresh_website_theme
-        refresh_website_theme()
-    except Exception:
-        pass
-
     # Refresh the already-open AI Assistant without reloading the chat. This
     # keeps its accent token in sync with the selected SynapsePro colour theme.
     try:
@@ -645,13 +631,6 @@ def _apply_saved_settings(new_settings):
         except Exception:
             pass
 
-    # Refresh website sidebar button colours.
-    try:
-        from .website_sidebar import refresh_website_theme
-        refresh_website_theme()
-    except Exception:
-        pass
-
     # Keep the open AI Assistant in sync with the newly selected colour theme
     # without reloading it or clearing the conversation.
     try:
@@ -699,14 +678,10 @@ def _redraw_top_toolbar():
     try:
         if not mw:
             return
-        from . import embedded_window
-        if embedded_window.is_active():
-            return
         toolbar = getattr(mw, "toolbar", None)
         if toolbar is not None:
             # Normal theme refreshes must not touch QWidget min/max heights.
-            # embedded_window.restore() owns the exceptional geometry-repair
-            # path; a regular toolbar draw lets Anki keep its native sizing.
+            # A regular toolbar draw lets Anki keep its native sizing.
             toolbar.draw()
     except Exception as e:
         print(f"SynapsePro: top toolbar redraw failed: {e}")
@@ -1167,8 +1142,6 @@ def _init_ui_delayed(expected_profile_generation=None):
         except Exception as e:
             print(f"SynapsePro: daily gamification maintenance failed: {e}")
 
-    if addon_settings.get("notebook_enabled", True):
-        setup_notebook_sidebar()
 
     if study_plan_trigger:
         study_plan_trigger.set_gamification_sidebar_trigger_function(toggle_gamification_sidebar)
@@ -1211,9 +1184,8 @@ def on_profile_close():
     except Exception:
         pass
     
-    cleanup_pomodoro(); cleanup_website_sidebar()
+    cleanup_pomodoro()
     cleanup_music_player(); cleanup_ai_assistant_sidebar()
-    cleanup_mindmap_sidebar(); cleanup_notebook_sidebar()
     try:
         custom_background.cleanup()
     except Exception:
@@ -1370,16 +1342,10 @@ def _handle_plan_timer(cmd: str):
         _plan_timer_cancel(_up.unquote(parts[2]))
 
 def webview_did_receive_js_message(handled: bool, message: str, context: object) -> Union[bool, object]:
-    pdf_link_prefix = "pycmd:synapsepro:pdf:"
-    if (
-        isinstance(message, str)
-        and message.startswith(pdf_link_prefix)
-        and isinstance(context, Reviewer)
-    ):
-        try:
-            open_pdf_review_link(message[len(pdf_link_prefix):])
-        except Exception as e:
-            print(f"SynapsePro PDF review link error: {e}")
+    # Old cards may still contain source links. Leave their content/data intact
+    # and consume the retired command instead of raising an unknown-command error.
+    if isinstance(message, str) and message.startswith("pycmd:synapsepro:pdf:") and isinstance(context, Reviewer):
+        tooltip(_("The PDF viewer was removed. Your original files are preserved."))
         return (True, None)
     if not isinstance(message, str) or not message.startswith("pycmd:"): return handled
     # These commands are emitted exclusively by widgets injected into the deck
@@ -1588,7 +1554,7 @@ if modules_loaded and mw and gui_hooks:
         gui_hooks.top_toolbar_did_init_links.append(
             _add_launcher_toggle_to_top_toolbar
         )
-    mw.addonManager.setWebExports(__name__, r"(theme/user_files/.+\.css|web_notebook/.+|media/.+)$") # Allow css, notebook AND media files
+    mw.addonManager.setWebExports(__name__, r"(theme/user_files/.+\.css|media/.+)$") # Shared theme and media assets
     gui_hooks.webview_will_set_content.append(inject_theme_assets)
     if hasattr(gui_hooks, "webview_did_inject_style_into_page"):
         gui_hooks.webview_did_inject_style_into_page.append(
