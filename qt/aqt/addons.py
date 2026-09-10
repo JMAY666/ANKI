@@ -234,10 +234,13 @@ class AddonManager:
 
     def loadAddons(self) -> None:
         from aqt import mw
+        from aqt.builtin_features import replaces_addon
 
         broken: list[str] = []
         error_text = ""
         for addon in self.all_addon_meta():
+            if replaces_addon(addon.dir_name, self.addonsFolder()):
+                continue
             if not addon.enabled:
                 continue
             if not addon.compatible():

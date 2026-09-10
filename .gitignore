@@ -157,6 +157,12 @@ collection.media/
 # SynapsePro isolated environments, backups, and local settings.
 /original/
 /runtime/
+/qt/aqt/builtin_features/**/ai_secrets.json
+/qt/aqt/builtin_features/**/addon_settings.json
+/qt/aqt/builtin_features/**/study_plan_config.json
+/qt/aqt/builtin_features/**/meta.json
+/qt/aqt/builtin_features/**/*_recovery.json
+/qt/aqt/builtin_features/**/*_backup.json
 **/__MACOSX/
 /docs/code-index.txt
 /addon/**/ai_secrets.json

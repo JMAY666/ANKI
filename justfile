@@ -6,39 +6,28 @@ mod release
 default:
     @just --list
 
-# SynapsePro tests use the separately installed Anki/Qt runtime.
-addon-test python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" -m unittest discover -s tests -v
+# Built-in features run inside this source tree's Anki, without ANKIDEV.
+builtin-run *args: build
+    & "out/pyenv/Scripts/python.exe" scripts/run_builtin.py {{args}}
 
-# Fresh synthetic profile, real Qt event loop and embedded card rendering.
-addon-browser-smoke run_name python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" scripts/browser_smoke.py {{run_name}}
+builtin-test:
+    & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py
 
-addon-browser-restart run_name python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" scripts/browser_restart.py {{run_name}}
+builtin-browser-smoke run_name:
+    & "out/pyenv/Scripts/python.exe" scripts/browser_smoke.py {{run_name}}
 
-# Fetch the pinned Windows player used by Anki's audio build.
-addon-audio-tools:
-    {{ ninja }} extract:mpv
+builtin-browser-restart run_name:
+    & "out/pyenv/Scripts/python.exe" scripts/browser_restart.py {{run_name}}
 
-addon-lint:
-    {{ if os() == "windows" { "out\\pyenv\\Scripts\\ruff.exe" } else { "out/pyenv/bin/ruff" } }} check addon/browser_preview.py addon/browser_scope.py addon/browser_workspace.py scripts/browser_smoke.py scripts/browser_restart.py tests/test_browser_scope.py
+builtin-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/builtin_smoke.py {{run_name}} {{mode}}
 
-addon-format:
-    {{ if os() == "windows" { "out\\pyenv\\Scripts\\ruff.exe" } else { "out/pyenv/bin/ruff" } }} check --select I,F401 --fix addon/browser_preview.py addon/browser_scope.py addon/browser_workspace.py scripts/browser_smoke.py scripts/browser_restart.py tests/test_browser_scope.py
-    {{ if os() == "windows" { "out\\pyenv\\Scripts\\ruff.exe" } else { "out/pyenv/bin/ruff" } }} format addon/browser_preview.py addon/browser_scope.py addon/browser_workspace.py scripts/browser_smoke.py scripts/browser_restart.py tests/test_browser_scope.py
+builtin-package template output: wheels
+    & "out/pyenv/Scripts/python.exe" scripts/build_builtin_distribution.py "{{template}}" "{{output}}"
 
-addon-prepare run_name python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" scripts/prepare.py {{run_name}}
-
-addon-smoke mode="write" python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" scripts/smoke_test.py {{mode}}
-
-addon-package python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" scripts/package.py
-
-addon-deploy run_name="manual" python=env("SYNAPSEPRO_PYTHON", ".venv/Scripts/python.exe"):
-    {{ if os() == "windows" { "& " } else { "" } }}"{{python}}" scripts/deploy_test.py {{run_name}}
+builtin-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/__init__.py qt/aqt/builtin_features/storage.py scripts/run_builtin.py scripts/builtin_smoke.py tests/test_builtin_storage.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/__init__.py qt/aqt/builtin_features/storage.py scripts/run_builtin.py scripts/builtin_smoke.py tests/test_builtin_storage.py
 
 # Build the project
 build:

@@ -616,6 +616,13 @@ def _extract_addon_request(path: str) -> LocalFileRequest | NotFound | None:
 def _extract_request(
     path: str,
 ) -> LocalFileRequest | BundledFileRequest | DynamicRequest | NotFound:
+    if path.startswith("_anki/builtin/"):
+        from aqt.builtin_features import asset_request
+
+        if asset := asset_request(path):
+            root, relative = asset
+            return LocalFileRequest(root=str(root), path=relative, untrusted=False)
+        return NotFound(message="Unknown built-in resource")
     if internal := _extract_internal_request(path):
         return internal
     elif addon := _extract_addon_request(path):

@@ -31,6 +31,8 @@
         "ts/vite.config.ts.timestamp*",
         "qt/installer/*-template",
         "addon/**",
+        "qt/aqt/builtin_features/synapsepro/**",
+        "qt/aqt/builtin_features/fsrs_helper/**",
         "original/**",
         "runtime/**",
         ".venv/**",

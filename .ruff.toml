@@ -9,7 +9,10 @@ lint.select = [
   # "SIM", # flake8-simplify
 ]
 
-extend-exclude = ["*_pb2.py", "*_pb2.pyi"]
+# Imported tool implementations retain their reviewed source formatting and
+# have syntax, behavior, and real Qt integration checks in builtin-test/smoke.
+force-exclude = true
+extend-exclude = ["*_pb2.py", "*_pb2.pyi", "qt/aqt/builtin_features/synapsepro", "qt/aqt/builtin_features/fsrs_helper"]
 
 lint.ignore = [
   # Docstring rules (missing-*-docstring in pylint)

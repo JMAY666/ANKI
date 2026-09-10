@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from aqt.builtin_features import asset_request
 from aqt.mediasrv import (
     UNTRUSTED_MEDIA_CSP,
     LocalFileRequest,
@@ -20,6 +21,27 @@ from aqt.mediasrv import (
     ensure_safe_path,
     is_localhost_origin,
 )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "_anki/builtin/synapsepro/themes/../ai_secrets.json",
+        "_anki/builtin/synapsepro/media/../../storage.py",
+        "_anki/builtin/synapsepro/media/ai_secrets.json",
+        "_anki/builtin/synapsepro/media/x\\y.svg",
+        "_anki/builtin/fsrs_helper/config.json",
+    ],
+)
+def test_builtin_assets_do_not_expose_config_or_code(path):
+    assert asset_request(path) is None
+
+
+def test_builtin_image_resolves_without_an_addon_manager():
+    root, relative = asset_request(
+        "_anki/builtin/synapsepro/media/sidebar_icon_open.svg"
+    )
+    assert (root / relative).is_file()
 
 
 class TestEnsureSafePath:

@@ -1,6 +1,6 @@
 """Real Qt workflow checks. Creates only runtime/<name> synthetic data.
 
-Run via just addon-browser-smoke. No real credentials, sync, grading or user
+Run via just builtin-browser-smoke. No real credentials, sync, grading or user
 profiles are involved. Qt/Anki APIs drive the test, not desktop input injection.
 """
 
@@ -16,6 +16,7 @@ import wave
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT / p) for p in ("qt", "pylib", "out/qt", "out/pylib")]
 name = sys.argv[1]
 assert name and Path(name).name == name and name not in (".", "..", "backups")
 BASE = (ROOT / "runtime" / name).resolve()

@@ -28,8 +28,10 @@ const NONSTANDARD_HEADER: &[&str] = &[
 ];
 
 const IGNORED_FOLDERS: &[&str] = &[
-    // SynapsePro keeps its own copyright and independent validation workflow.
-    "./addon",
+    // Imported implementations retain their original copyright and licenses.
+    // Anki's integration layer remains subject to the standard header check.
+    "./qt/aqt/builtin_features/synapsepro",
+    "./qt/aqt/builtin_features/fsrs_helper",
     "./scripts",
     "./tests",
     "./original",

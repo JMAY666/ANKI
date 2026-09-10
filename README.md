@@ -11,11 +11,13 @@ This repo contains the source code for the computer version of
 
 Anki is a spaced repetition program. Please see the [website](https://apps.ankiweb.net) to learn more.
 
-## SynapsePro 本地插件
+## 内置 SynapsePro 与 FSRS Helper
 
-本仓库的 `main` 同时保留 Anki 主程序和 `addon/` 下的 SynapsePro 1.6.0-local 插件。插件提供三栏卡片浏览：可搜索的牌组目录、原生卡片列表和模板预览，右侧可切换原生编辑器，并可恢复标准布局。保留 DeepSeek API 支持；此前移除的网页查看器、笔记本与思维导图，其已有用户数据仍保留。
+本仓库把 SynapsePro 1.6.0-local 与 FSRS Helper 26.05.08 直接集成进 Anki 26.08.1 源码，交付同一个可启动软件，不需要用户安装两个插件。保留 DeepSeek、三栏浏览、学习计划、番茄钟等已确认功能；网页查看器、笔记本与思维导图保持移除，旧数据保留。
 
-三栏浏览在独立的 Anki 25.09.4 和本仓库 26.08.1 环境验证；具体范围与限制见 [1.6.0 验证报告](docs/RELEASE-1.6.0.md)。安装、中文启动和测试步骤见 [SynapsePro 插件说明](SYNAPSEPRO.md)。后续修改审核后统一推送 `main`。
+源码位于 `qt/aqt/builtin_features/`，由 Anki 初始化并管理配置；旧插件配置可迁入，重复加载会被拦截。三栏浏览同时提供 FSRS Target R，保留原生浏览与复习流程。
+
+构建、启动、迁移和恢复见 [内置功能说明](BUILTIN-FEATURES.md)，本次安装与验证见 [交付记录](docs/BUILTIN-INTEGRATION-2026-09-11.md)。后续修改审核后统一推送 `main`。
 
 ## Getting Started
 

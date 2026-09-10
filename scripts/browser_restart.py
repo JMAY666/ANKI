@@ -8,6 +8,7 @@ import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT / p) for p in ("qt", "pylib", "out/qt", "out/pylib")]
 name = sys.argv[1]
 assert name and Path(name).name == name and name not in (".", "..", "backups")
 BASE = (ROOT / "runtime" / name).resolve()

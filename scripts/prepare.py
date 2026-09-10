@@ -1,25 +1,16 @@
 """Create a fresh isolated Anki fixture; never overwrite an existing run."""
 from pathlib import Path
 import json
-import shutil
 import sys
 import sqlite3
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT / p) for p in ("qt", "pylib", "out/qt", "out/pylib")]
 base = ROOT / "runtime" / (sys.argv[1] if len(sys.argv) > 1 else "manual")
 assert base.resolve().is_relative_to(ROOT / "runtime")
 if base.exists():
     raise SystemExit(f"Already exists; reuse it or choose a new run name: {base}")
 base.mkdir(parents=True)
-shutil.copytree(ROOT / "addon", base / "addons21" / "236979321",
-                ignore=shutil.ignore_patterns("__MACOSX", ".DS_Store", "__pycache__"))
-manifest = json.loads((ROOT / "addon" / "manifest.json").read_text(encoding="utf-8"))
-(base / "addons21" / "236979321" / "meta.json").write_text(json.dumps({
-    "name": "SynapsePro", "disabled": False, "mod": 1786729966,
-    "min_point_version": manifest["min_point_version"],
-    "max_point_version": manifest.get("max_point_version", 0),
-    "human_version": manifest["human_version"],
-}), encoding="utf-8")
 from aqt.profiles import ProfileManager
 from anki.collection import Collection
 pm = ProfileManager(base)

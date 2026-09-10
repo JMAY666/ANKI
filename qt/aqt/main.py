@@ -1016,6 +1016,10 @@ title="{}" {}>{}</button>""".format(
 
         self.addonManager = aqt.addons.AddonManager(self)
 
+        from aqt.builtin_features import initialize
+
+        initialize(self)
+
         if args and args[0] and self._isAddon(args[0]):
             self.installAddon(args[0], startup=True)
 

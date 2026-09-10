@@ -8,7 +8,7 @@ from pathlib import Path
 from anki.collection import Collection
 
 spec = importlib.util.spec_from_file_location(
-    "browser_scope", Path(__file__).resolve().parents[1] / "addon" / "browser_scope.py"
+    "browser_scope", Path(__file__).resolve().parents[1] / "qt/aqt/builtin_features/synapsepro" / "browser_scope.py"
 )
 scope = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scope)

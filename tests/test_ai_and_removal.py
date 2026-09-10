@@ -13,7 +13,7 @@ from urllib.error import HTTPError
 
 ROOT = Path(__file__).resolve().parents[1]
 package = types.ModuleType("synapse_test")
-package.__path__ = [str(ROOT / "addon")]
+package.__path__ = [str(ROOT / "qt/aqt/builtin_features/synapsepro")]
 sys.modules[package.__name__] = package
 ai = importlib.import_module("synapse_test.ai_assistant")
 
@@ -121,24 +121,24 @@ class RemovalRegression(unittest.TestCase):
     def test_exclusive_files_and_imports_removed(self):
         retired = {"website_sidebar", "notebook_sidebar", "mindmap_sidebar", "embedded_window"}
         for name in retired:
-            self.assertFalse((ROOT / "addon" / (name + ".py")).exists())
-        self.assertFalse(any((ROOT / "addon/web_notebook").rglob("*.js")))
-        self.assertFalse((ROOT / "addon/index.html").exists())
-        for p in (ROOT / "addon").glob("*.py"):
+            self.assertFalse((ROOT / "qt/aqt/builtin_features/synapsepro" / (name + ".py")).exists())
+        self.assertFalse(any((ROOT / "qt/aqt/builtin_features/synapsepro/web_notebook").rglob("*.js")))
+        self.assertFalse((ROOT / "qt/aqt/builtin_features/synapsepro/index.html").exists())
+        for p in (ROOT / "qt/aqt/builtin_features/synapsepro").glob("*.py"):
             tree = ast.parse(p.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 if isinstance(node, ast.ImportFrom):
                     self.assertNotIn(node.module, retired, p.name)
                     self.assertFalse(retired & {n.name for n in node.names}, p.name)
-        self.assertTrue((ROOT / "addon/chat_ui.html").exists())
-        self.assertTrue((ROOT / "addon/media/wordcloud2.min.js").exists())
+        self.assertTrue((ROOT / "qt/aqt/builtin_features/synapsepro/chat_ui.html").exists())
+        self.assertTrue((ROOT / "qt/aqt/builtin_features/synapsepro/media/wordcloud2.min.js").exists())
 
     def test_removed_controls_and_shortcuts_not_registered(self):
         constants = importlib.import_module("synapse_test.constants")
         for key in ("website_viewer_enabled", "notebook_enabled", "mindmap_enabled"):
             self.assertNotIn(key, constants.SIDEBAR_SHORTCUT_KEYS)
             for name in ("__init__.py", "launcher_widget.py", "sidebar_shortcuts.py", "settings_dialog.py", "web_settings_dialog.py", "settings_web/settings.html"):
-                self.assertNotIn(key, (ROOT / "addon" / name).read_text(encoding="utf-8"))
+                self.assertNotIn(key, (ROOT / "qt/aqt/builtin_features/synapsepro" / name).read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
