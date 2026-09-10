@@ -336,6 +336,7 @@ class BrowserWorkspace(QObject):
             )
             self.tabs.setCurrentIndex(0)
             self.apply_responsive()
+            QTimer.singleShot(0, self.keep_on_screen)
         else:
             self.prefs["geometry"] = bytes(b.saveGeometry()).hex()
             # Retain the user's splitter choice. Automatic resizing / hiding a
@@ -922,6 +923,25 @@ class BrowserWorkspace(QObject):
                         self.preview.replay()
                         return True
         return super().eventFilter(obj, event)
+
+    def keep_on_screen(self):
+        if self.closed or not self.enabled:
+            return
+        b = self.browser
+        if b.isMaximized() or b.isFullScreen():
+            return
+        available = b.screen().availableGeometry()
+        frame = b.frameGeometry()
+        x = min(
+            max(frame.x(), available.x()),
+            available.x() + max(0, available.width() - frame.width()),
+        )
+        y = min(
+            max(frame.y(), available.y()),
+            available.y() + max(0, available.height() - frame.height()),
+        )
+        # Move by the frame delta; Qt/platform frame margins need not be equal.
+        b.move(b.pos().x() + x - frame.x(), b.pos().y() + y - frame.y())
 
 
 def on_browser(browser):

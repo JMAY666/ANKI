@@ -182,12 +182,18 @@ gui_hooks.av_player_did_begin_playing.append(
 def open_browser():
     global browser, workspace
     browser = aqt.dialogs.open("Browser", mw)
-    browser.resize(1320, 760)
+    browser.resize(720, 560)
+    available = browser.screen().availableGeometry()
+    browser.move(available.right() - 740, available.top() + 70)
     workspace = browser._synapse_workspace
     wait_for(lambda: workspace.enabled and idle(), initial)
 
 
 def initial():
+    check(
+        "expanded_browser_stays_on_screen",
+        browser.screen().availableGeometry().contains(browser.frameGeometry()),
+    )
     check("parent_and_children", browser.table.len() == 5)
     check("cards_not_notes", not browser.table.is_notes_mode())
     check(
