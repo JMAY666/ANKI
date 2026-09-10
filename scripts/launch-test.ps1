@@ -6,4 +6,4 @@ if (-not $base.StartsWith((Join-Path $root 'runtime') + [IO.Path]::DirectorySepa
 if (-not (Test-Path (Join-Path $base 'prefs21.db'))) { throw 'Run scripts/prepare.py with this run name first' }
 $env:ANKI_SINGLE_INSTANCE_KEY = "synapsepro-test-$RunName"
 $env:PYTHONUTF8 = '1'
-& "$root/.venv/Scripts/python.exe" -c 'import aqt; aqt.run()' -b $base -p SynapsePro-Test -l en_US
+& "$root/.venv/Scripts/python.exe" -c 'import aqt; aqt.run()' -b $base -p SynapsePro-Test -l zh_CN

@@ -22,7 +22,7 @@ pm = ProfileManager(base)
 pm.setupMeta()
 pm.create("SynapsePro-Test")
 pm.load("SynapsePro-Test")
-pm.meta["defaultLang"] = "en_US"
+pm.meta["defaultLang"] = "zh_CN"
 pm.profile.update(autoSync=False, syncKey=None, syncMedia=False, firstRun=False)
 pm.save()
 col = Collection(pm.collectionPath())

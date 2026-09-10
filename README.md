@@ -2,6 +2,8 @@
 
 本阶段仅获取、梳理和准备环境，未修改插件行为。后续修改目标为 `addon/`，不是同级 Anki 主程序仓库。
 
+隔离测试启动器默认使用简体中文（`zh_CN`）。现有 manual 配置中的 SynapsePro 语言已设为中文（`zh`）；后续新配置使用插件的自动跟随 Anki 语言设置。
+
 ## 来源与基线
 
 - 插件：SynapsePro，AnkiWeb 名称 SynapsePro - The Ultimate Anki Workspace，ID `236979321`。
