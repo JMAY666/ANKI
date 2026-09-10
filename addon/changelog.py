@@ -2,6 +2,11 @@
 """English changelog data rendered in the Settings dialog."""
 
 CHANGELOG = [
+    {"version": "1.6.0-local", "date": "September 2026", "items": [
+        {'tag': 'New', 'text': 'Added a three-pane card browser with a searchable deck tree, native card list and embedded template preview.'},
+        {'tag': 'New', 'text': 'Preview and edit tabs, adjustable widths, narrow-window navigation and a switch back to the standard Anki browser.'},
+        {'tag': 'Improved', 'text': 'Background searches discard stale results. Preview does not grade cards or change scheduling.'},
+    ]},
     {"version": "1.5.1-local", "date": "September 2026", "items": [
         {'tag': 'New', 'text': 'Added DeepSeek as an API provider with profile-local key storage and configurable models.'},
         {'tag': 'Changed', 'text': 'Removed Website Viewer, Notebook and Mind Map; existing user data is retained.'},

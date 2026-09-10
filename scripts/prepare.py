@@ -13,9 +13,12 @@ if base.exists():
 base.mkdir(parents=True)
 shutil.copytree(ROOT / "addon", base / "addons21" / "236979321",
                 ignore=shutil.ignore_patterns("__MACOSX", ".DS_Store", "__pycache__"))
+manifest = json.loads((ROOT / "addon" / "manifest.json").read_text(encoding="utf-8"))
 (base / "addons21" / "236979321" / "meta.json").write_text(json.dumps({
     "name": "SynapsePro", "disabled": False, "mod": 1786729966,
-    "min_point_version": 250904, "max_point_version": 260500,
+    "min_point_version": manifest["min_point_version"],
+    "max_point_version": manifest.get("max_point_version", 0),
+    "human_version": manifest["human_version"],
 }), encoding="utf-8")
 from aqt.profiles import ProfileManager
 from anki.collection import Collection

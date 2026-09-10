@@ -13,9 +13,9 @@ Anki is a spaced repetition program. Please see the [website](https://apps.ankiw
 
 ## SynapsePro 本地插件
 
-本仓库的 `main` 同时保留 Anki 主程序和 `addon/` 下的 SynapsePro 1.5.1-local 插件。插件新增 DeepSeek API 服务商，移除网页查看器、笔记本与思维导图，已有用户数据保留。
+本仓库的 `main` 同时保留 Anki 主程序和 `addon/` 下的 SynapsePro 1.6.0-local 插件。插件提供三栏卡片浏览：可搜索的牌组目录、原生卡片列表和模板预览，右侧可切换原生编辑器，并可恢复标准布局。保留 DeepSeek API 支持；此前移除的网页查看器、笔记本与思维导图，其已有用户数据仍保留。
 
-插件使用独立的 Anki 25.09.4 测试环境，不代表它兼容本仓库主程序的 26.08.1。安装、中文启动和测试步骤见 [SynapsePro 插件说明](SYNAPSEPRO.md)。后续修改审核后统一推送 `main`。
+三栏浏览在独立的 Anki 25.09.4 和本仓库 26.08.1 环境验证；具体范围与限制见 [1.6.0 验证报告](docs/RELEASE-1.6.0.md)。安装、中文启动和测试步骤见 [SynapsePro 插件说明](SYNAPSEPRO.md)。后续修改审核后统一推送 `main`。
 
 ## Getting Started
 

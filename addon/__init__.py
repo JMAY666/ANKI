@@ -1544,6 +1544,8 @@ def _add_menus():
 
 # --- Init Hooks ---
 if modules_loaded and mw and gui_hooks:
+    from . import browser_workspace
+    browser_workspace.register()
     gui_hooks.profile_did_open.append(on_profile_open)
     gui_hooks.profile_will_close.append(on_profile_close)
     gui_hooks.deck_browser_will_render_content.append(render_all_deck_browser_widgets)

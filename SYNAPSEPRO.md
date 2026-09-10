@@ -1,6 +1,19 @@
 # SynapsePro 插件说明
 
-当前本地版本为 **1.5.1-local**：AI 助手新增 DeepSeek API；移除网页查看器、笔记本（含待办/PDF）和思维导图，保留原有数据。插件源码位于同一 main 分支的 `addon/`；Anki 主程序目录保持独立。以下“来源与基线”记录原始 1.5.0，当前修改详情和验证见 [本地版本报告](docs/RELEASE-1.5.1.md)。
+当前本地版本为 **1.6.0-local**：在原生卡片浏览器中增加三栏浏览，保留原生编辑器和标准布局。继续保留 1.5.1 的 DeepSeek API 支持及旧数据保护。插件源码位于同一 main 分支的 `addon/`；Anki 主程序目录保持独立。以下“来源与基线”记录原始 1.5.0，当前修改详情和验证见 [1.6.0 报告](docs/RELEASE-1.6.0.md)，此前修改见 [1.5.1 报告](docs/RELEASE-1.5.1.md)。
+
+## 三栏卡片浏览
+
+点击 Anki 顶部“浏览”，首次打开会进入三栏模式，并在屏幕允许时扩大窗口。工具栏或“视图”菜单中取消勾选“三栏浏览”，即可恢复标准布局、原生列设置和笔记模式。
+
+- 左侧牌组目录直接读取 Anki 层级；支持查找、折叠、选中标记及长名称悬停提示。默认包含子牌组，可取消勾选“包含子牌组”。选择另一牌组会清空内容搜索；查找牌组只过滤目录。
+- 中间按卡片显示问题摘要、卡片模板和到期信息。同一笔记的正反向卡片、不同挖空卡片分别列出。搜索支持 Anki 语法；排序下拉框支持排序字段、添加时间、到期、模板和牌组，箭头切换升降序。问题摘要本身不支持排序。
+- 右侧“预览”使用 Anki 模板、媒体服务和原生播放器。“显示答案”只翻面，不评分，不修改调度。切换卡片回到正面；多选时提示选择一张卡片。“编辑”保留原生保存、模板/字段操作及撤销流程，切换牌组前保存未完成的编辑。
+- 窗口尺寸、分栏宽度、目录显隐、折叠状态及排序保存在当前 profile 的本地设置中。窄窗口用工具栏“牌组目录／卡片列表／卡片预览”切换，不强制挤满三栏。原生布局的窗口尺寸和列宽分别保留。
+- `F6` 在目录、列表、预览之间切换；`Ctrl+Alt+1/2/3` 分别聚焦这三个区域。目录用方向键展开、折叠及选择，列表用上下键选择；列表中的空格显示/切换预览，`R` 重播音频。编辑输入框不使用这些单键操作。原有“跳转”菜单也会转到当前可见区域。
+- “全部筛选条件”显示原生侧栏的标签、状态、已保存搜索等；工具栏“牌组目录”可以返回目录。其他入口传入的搜索（例如困难卡片）保持原条件，并显示“自定义搜索范围”。
+
+与原生预览一致，输入答案型卡片的输入框会隐藏。未对所有自定义 JavaScript 模板、第三方浏览器插件或所有主题组合做穷举验证。
 
 隔离测试启动器默认使用简体中文（`zh_CN`）。现有 manual 配置中的 SynapsePro 语言已设为中文（`zh`）；后续新配置使用插件的自动跟随 Anki 语言设置。
 
@@ -19,7 +32,7 @@
 
 ## 兼容版本与目录
 
-作者 README / 代码要求 Anki Desktop **25.09.4+、Qt6 WebEngine**；AnkiWeb 当前分支元数据限定 **25.09.4–26.05.0**。这是两个不同来源的约束，不能据最低版本检查认定所有更新版本兼容。原有 `../ANKI/` 为 26.08.1，本阶段未用它做兼容性结论，也未修改该仓库。
+原版作者 README / 代码要求 Anki Desktop **25.09.4+、Qt6 WebEngine**；原始下载时的 AnkiWeb 分支元数据限定 **25.09.4–26.05.0**。这份历史元数据不等同于当前本地修改版的验证范围。1.6.0 的三栏浏览分别在 **25.09.4** 与源码构建的 **26.08.1** 验证；升级到其他版本后仍需重新运行回归。
 
 | 目录                           | 用途                                                           |
 | ------------------------------ | -------------------------------------------------------------- |
@@ -59,9 +72,24 @@ uv pip check --python .venv/Scripts/python.exe
 ./.venv/Scripts/python.exe scripts/package.py
 ```
 
-打包输出 `dist/SynapsePro-1.5.1-local.ankiaddon`。包内 manifest 的 package 为 `SynapsePro1`，而通过 AnkiWeb ID 安装/测试复制使用 `236979321`；不要在同一配置中同时启用两份。已有 manual 配置使用 `scripts/deploy_test.py manual` 更新（必须先退出 Anki），脚本会完整备份 profile，再只替换插件安装副本并校验 profile 数据哈希。无需再手动安装第二份插件。不要用 AnkiWeb 更新覆盖本地修改版。
+打包输出 `dist/SynapsePro-1.6.0-local.ankiaddon`。包内 manifest 的 package 为 `SynapsePro1`，而通过 AnkiWeb ID 安装/测试复制使用 `236979321`；不要在同一配置中同时启用两份。已有 manual 配置使用 `scripts/deploy_test.py manual` 更新（必须先退出 Anki），脚本会完整备份 profile，再只替换插件安装副本并校验 profile 数据哈希。无需再手动安装第二份插件。不要用 AnkiWeb 更新覆盖本地修改版。
 
-启动脚本始终传 `-b runtime/<name>`、`-p SynapsePro-Test` 和独立 `ANKI_SINGLE_INSTANCE_KEY`。不传 `--safemode`，因为它会禁用待测插件。测试配置不登录 AnkiWeb，已设置 `autoSync=False`、`syncMedia=False`、`syncKey=None`，只有合成测试牌组和一张 2+2 卡片。不要把正式导出、媒体或 API key 放入这里。
+仅通过 pip 准备的测试环境可能缺少音频播放器。Windows 源码工作区可先执行 `just addon-audio-tools`，通过项目已锁定版本和 SHA-256 的构建配方准备 mpv。启动脚本会在本进程中使用 `out/extracted/mpv`；跨工作区时可传 `-AudioDirectory <播放器目录>`，也可通过 `-PythonPath <python.exe>` 指定隔离 Python。不会修改系统 PATH。
+
+三栏功能的重复验证使用以下配方；`<run>` 必须是新的测试目录名：
+
+```powershell
+just addon-test <python.exe>
+just addon-lint
+just addon-browser-smoke <run> <python.exe>
+just addon-browser-restart <run> <python.exe>
+# 默认生成 1 万张性能卡片；10 万张验证前设置：
+$env:SYNAPSE_BROWSER_TEST_COUNT = '100000'
+```
+
+源码 26.08.1 测试使用 `out/pyenv/Scripts/python.exe`，并在当前命令进程设置 `PYTHONPATH=pylib;qt;out/pylib;out/qt`；请勿把该值带入 25.09.4 的独立运行环境。插件原有功能另用 `just addon-prepare smoke-1.5.1 <python.exe>` 和 `just addon-smoke write/restart <python.exe>` 验证。`just check` 仍是主程序的完整检查入口，不能代替插件回归。
+
+启动脚本始终传 `-b runtime/<name>`、`-p SynapsePro-Test` 和独立 `ANKI_SINGLE_INSTANCE_KEY`。不传 `--safemode`，因为它会禁用待测插件。测试配置不登录 AnkiWeb，已设置 `autoSync=False`、`syncMedia=False`、`syncKey=None`。基础测试配置初始只有一张 2+2 卡片；浏览验收脚本会另行生成专用样本和性能数据。不要把正式导出、媒体或 API key 放入这里。
 
 首次引导需要本人审阅并决定是否同意条款；自动测试不会接受条款或发送引导统计。当前版本需验证主界面与主题、侧栏、番茄钟、复习与统计/XP、计划与截止日期、AI 和音乐。已移除功能不再作为可操作入口，但旧数据保留须校验。每项记录动作、预期、结果和日志，不能以窗口出现代替验收。
 

@@ -47,6 +47,15 @@ for p in target.rglob("*"):
         (stage / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(p, stage / rel)
         preserved.append(rel.as_posix())
+# Refresh declared version metadata like Anki's package installer does, while
+# retaining disabled/update flags and any user configuration in meta.json.
+manifest = json.loads((stage / "manifest.json").read_text(encoding="utf-8"))
+meta_path = stage / "meta.json"
+meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+for key in ("min_point_version", "max_point_version", "human_version"):
+    if key in manifest:
+        meta[key] = manifest[key]
+meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
 # Keep the old install outside addons21; it cannot load as a second addon.
 previous = base / (".addon-previous-" + stamp)
 target.rename(previous)
