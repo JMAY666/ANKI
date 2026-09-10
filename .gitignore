@@ -153,3 +153,16 @@ collection.media/
 !/pylib/tests/support/update2.apkg
 !/qt/tests/support/dummy_package-0.1.0-py3-none-any.whl
 !/rslib/tests/support/mediacheck.anki2
+
+# SynapsePro isolated environments, backups, and local settings.
+/original/
+/runtime/
+**/__MACOSX/
+/docs/code-index.txt
+/addon/**/ai_secrets.json
+/addon/**/addon_settings.json
+/addon/**/study_plan_config.json
+/addon/**/meta.json
+/addon/**/*_recovery.json
+/addon/**/*_backup.json
+/addon/**/_secrets.py

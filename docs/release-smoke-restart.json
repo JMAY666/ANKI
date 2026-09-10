@@ -1,0 +1,27 @@
+{
+  "mode": "restart",
+  "checks": {
+    "profile_initialized": true,
+    "onboarding_webview_rendered": true,
+    "onboarding_rejected_without_acceptance": true,
+    "modules_loaded": true,
+    "isolated_profile": true,
+    "no_sync_credentials": true,
+    "onboarding_not_completed": true,
+    "managers_initialized": true,
+    "dashboard_deck_rendered": true,
+    "launcher_initialized": true,
+    "launcher_toggled": true,
+    "launcher_restored": true,
+    "deepseek_restart_settings": true,
+    "deepseek_restart_key": true,
+    "review_restart_persistence": true,
+    "legacy_data_unchanged": true
+  },
+  "errors": [],
+  "onboarding_accepted": false,
+  "onboarding_dom_length": 120,
+  "onboarding_dismissed": true,
+  "elapsed_seconds": 2.15,
+  "passed": true
+}

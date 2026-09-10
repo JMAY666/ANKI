@@ -11,6 +11,12 @@ This repo contains the source code for the computer version of
 
 Anki is a spaced repetition program. Please see the [website](https://apps.ankiweb.net) to learn more.
 
+## SynapsePro 本地插件
+
+本仓库的 `main` 同时保留 Anki 主程序和 `addon/` 下的 SynapsePro 1.5.1-local 插件。插件新增 DeepSeek API 服务商，移除网页查看器、笔记本与思维导图，已有用户数据保留。
+
+插件使用独立的 Anki 25.09.4 测试环境，不代表它兼容本仓库主程序的 26.08.1。安装、中文启动和测试步骤见 [SynapsePro 插件说明](SYNAPSEPRO.md)。后续修改审核后统一推送 `main`。
+
 ## Getting Started
 
 ### Contributing

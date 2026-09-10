@@ -28,6 +28,13 @@ const NONSTANDARD_HEADER: &[&str] = &[
 ];
 
 const IGNORED_FOLDERS: &[&str] = &[
+    // SynapsePro keeps its own copyright and independent validation workflow.
+    "./addon",
+    "./scripts",
+    "./tests",
+    "./original",
+    "./runtime",
+    "./dist",
     "./out",
     "./node_modules",
     "./qt/aqt/forms",

@@ -1,3 +1,7 @@
 * text=auto eol=lf
 *.ftl -linguist-detectable
 cargo/remote/* linguist-vendored
+
+# Preserve the plugin release bytes and local launcher line endings.
+/addon/** -text
+/scripts/*.ps1 text eol=crlf

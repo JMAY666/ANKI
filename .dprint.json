@@ -8,7 +8,9 @@
     },
     "markdown": {},
     "toml": {},
-    "includes": ["**/*.{ts,tsx,js,jsx,cjs,mjs,json,md,toml,svelte,scss}"],
+    "includes": [
+        "**/*.{ts,tsx,js,jsx,cjs,mjs,json,md,toml,svelte,scss}"
+    ],
     "excludes": [
         ".vscode",
         "**/node_modules",
@@ -27,7 +29,15 @@
         "extra",
         "ts/.svelte-kit",
         "ts/vite.config.ts.timestamp*",
-        "qt/installer/*-template"
+        "qt/installer/*-template",
+        "addon/**",
+        "original/**",
+        "runtime/**",
+        ".venv/**",
+        "dist/**",
+        "docs/load-result.json",
+        "docs/*smoke*.json",
+        "docs/source-inspection.json"
     ],
     "plugins": [
         "https://plugins.dprint.dev/typescript-0.91.6.wasm",
