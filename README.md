@@ -66,3 +66,5 @@ uv pip check --python .venv/Scripts/python.exe
 测试回滚：退出测试进程，重新从原始包建立新 `runtime/<name>`；原测试目录保留备查。后续数据兼容测试须备份完整测试 profile（含 collection、媒体、SynapsePro_Data、笔记数据库和 WebEngine 存储）。不对现有工作目录执行自动清理或强制还原。
 
 详细结论见 [接手报告](docs/HANDOVER.md)，修改位置见 [结构说明](docs/ARCHITECTURE.md)。
+
+后续已补做 [真实事件循环冒烟测试](docs/SMOKE.md)：主界面、计时、笔记/待办存储、复习及重启持久化通过；思维导图页面初始化失败，整组测试保持失败状态，未修改原版功能。复现脚本为 `scripts/smoke_test.py`。
