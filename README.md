@@ -13,7 +13,7 @@ Anki is a spaced repetition program. Please see the [website](https://apps.ankiw
 
 ## 内置 SynapsePro、FSRS Helper 与 Pass/Fail 2
 
-新增内置 **Minimize to Tray 2 0.2** 与 **AnkiPenDown 1.1**，入口为「工具 → 托盘与手写」。按用户确认，默认点击 × 正常退出，可按需开启托盘隐藏；卡片手写保留双画笔、荧光笔、笔画橡皮、撤销与画布设置，设置按账户保存，菜单与控件已接入简体中文。实际使用版本更新在 `dist/Anki-experience-final-26.8.1/Anki.exe`。来源、配置兼容、验证和回退见 [托盘与手写说明](docs/DESKTOP-TOOLS.md)。
+新增内置 **Minimize to Tray 2 0.2** 与 **AnkiPenDown 1.1**，入口为「SynapsePro 左侧快捷栏 → 托盘与手写」。按用户确认，默认点击 × 正常退出，可按需开启托盘隐藏；卡片手写保留双画笔、荧光笔、笔画橡皮、撤销与画布设置，设置按账户保存，菜单与控件已接入简体中文。实际使用版本更新在 `dist/Anki-experience-final-26.8.1/Anki.exe`。来源、配置兼容、验证和回退见 [托盘与手写说明](docs/DESKTOP-TOOLS.md)。
 
 本仓库把 SynapsePro 1.6.0-local 与 FSRS Helper 26.05.08 直接集成进 Anki 26.08.1 源码，交付同一个可启动软件，不需要用户安装两个插件。保留 DeepSeek、三栏浏览、学习计划、番茄钟等已确认功能；网页查看器、笔记本与思维导图保持移除，旧数据保留。
 

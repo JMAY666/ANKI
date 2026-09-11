@@ -133,8 +133,8 @@ try:
     owner, col = mw.desktop_tools, mw.col
     initialize(mw)
     check(
-        "one menu after repeated initialization",
-        sum(a.text() == "托盘与手写" for a in mw.form.menuTools.actions()) == 1,
+        "no duplicate Tools menu entry",
+        sum(a.text() == "托盘与手写" for a in mw.form.menuTools.actions()) == 0,
     )
     check(
         "legacy copies blocked",
@@ -165,6 +165,20 @@ try:
     else:
         check("tray default preserves normal exit", not owner.tray_value["enabled"])
     mw.resize(1050, 800)
+    sidebar = sys.modules["aqt.builtin_features.synapsepro"].sidebar_widget_instance
+    anchor = sidebar._desktop_tools_button
+    check("sidebar icon available", anchor.isVisible() and not anchor.icon().isNull())
+    QTest.mouseClick(anchor, Qt.MouseButton.LeftButton)
+    wait(lambda: owner.menu.isVisible())
+    check(
+        "sidebar opens all desktop tools",
+        [action.text() for action in owner.menu.actions()]
+        == ["启用卡片手写", "设置…", "使用说明"],
+    )
+    mw.grab().save(str(BASE / f"{mode}-sidebar.png"))
+    owner.menu.grab().save(str(BASE / f"{mode}-sidebar-menu.png"))
+    QTest.keyClick(owner.menu, Qt.Key.Key_Escape)
+    check("Escape closes sidebar menu", not owner.menu.isVisible())
     owner.set_enabled(True)
     mw.moveToState("review")
     wait(lambda: mw.reviewer.card and js("!!window.ankiPenDown"))

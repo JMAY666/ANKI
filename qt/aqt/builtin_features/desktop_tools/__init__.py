@@ -6,7 +6,7 @@ from typing import Any
 
 from anki import lang
 from aqt import gui_hooks
-from aqt.qt import QAction, QKeySequence, QShortcut
+from aqt.qt import QAction, QKeySequence, QMenu, QPoint, QShortcut
 from aqt.utils import showWarning
 
 from ..storage import write_object
@@ -22,9 +22,7 @@ class DesktopTools:
         self.pen_value = dict(PEN_DEFAULTS)
         self.tray: Any = None
         self.loaded = False
-        self.menu = mw.form.menuTools.addMenu(
-            self.tr("托盘与手写", "Tray and handwriting")
-        )
+        self.menu = QMenu(self.tr("托盘与手写", "Tray and handwriting"), mw)
         self.toggle = QAction(self.tr("启用卡片手写", "Enable card handwriting"), mw)
         self.toggle.setCheckable(True)
         self.toggle.setEnabled(False)
@@ -49,6 +47,19 @@ class DesktopTools:
     @staticmethod
     def tr(chinese: str, english: str) -> str:
         return chinese if lang.current_lang.startswith("zh") else english
+
+    def open_menu(self, anchor: Any) -> None:
+        if self.menu.isVisible():
+            self.menu.close()
+            return
+        point = anchor.mapToGlobal(QPoint(anchor.width() + 6, 0))
+        bounds = self.mw.frameGeometry().intersected(
+            anchor.screen().availableGeometry()
+        )
+        size = self.menu.sizeHint()
+        point.setX(max(bounds.left(), min(point.x(), bounds.right() - size.width())))
+        point.setY(max(bounds.top(), min(point.y(), bounds.bottom() - size.height())))
+        self.menu.popup(point)
 
     def start_tray(self) -> None:
         from .tray import Tray

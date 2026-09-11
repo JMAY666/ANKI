@@ -210,6 +210,17 @@ class SidebarWidget(QWidget):
             self._quick_button.installEventFilter(self)
             self._quick_button.clicked.connect(lambda: open_quick_switches(mw, self._quick_button))
             main_layout.addWidget(self._quick_button)
+
+        self._desktop_tools_button = self.create_icon_button("desktop_tools.svg", "托盘与手写")
+        if self._desktop_tools_button:
+            self._desktop_tools_button.setObjectName("desktopToolsLauncher")
+            self._desktop_tools_button.setAccessibleName("托盘与手写")
+            self._desktop_tools_button.setCheckable(False)
+            self._desktop_tools_button.installEventFilter(self)
+            self._desktop_tools_button.clicked.connect(
+                lambda: mw.desktop_tools.open_menu(self._desktop_tools_button)
+            )
+            main_layout.addWidget(self._desktop_tools_button)
         
         top_icon_definitions = [
             (constants.AI_TOOL_ICON_FILENAME, _("Show/Hide AI Assistant")),
