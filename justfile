@@ -19,6 +19,13 @@ navigation-test:
 navigation-smoke run_name mode="write":
     & "out/pyenv/Scripts/python.exe" scripts/navigation_smoke.py {{run_name}} {{mode}}
 
+review-layout-smoke run_name mode="verify":
+    & "out/pyenv/Scripts/python.exe" scripts/review_layout_smoke.py {{run_name}} {{mode}}
+
+review-layout-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/learning/review_layout.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/reviewer.py qt/aqt/toolbar.py qt/tests/test_review_layout.py qt/tests/test_toolbar.py scripts/review_layout_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/learning/review_layout.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/reviewer.py qt/aqt/toolbar.py qt/tests/test_review_layout.py qt/tests/test_toolbar.py scripts/review_layout_smoke.py
+
 navigation-format:
     & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/learning qt/aqt/builtin_features/passfail2 qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/__init__.py qt/aqt/deckbrowser.py qt/aqt/toolbar.py qt/aqt/reviewer.py scripts/navigation_smoke.py scripts/learning_smoke.py scripts/builtin_tests.py tests/test_navigation.py
     & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/learning qt/aqt/builtin_features/passfail2 qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/__init__.py qt/aqt/deckbrowser.py qt/aqt/toolbar.py qt/aqt/reviewer.py scripts/navigation_smoke.py scripts/learning_smoke.py scripts/builtin_tests.py tests/test_navigation.py

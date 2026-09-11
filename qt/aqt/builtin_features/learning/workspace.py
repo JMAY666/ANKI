@@ -47,6 +47,7 @@ from aqt.webview import AnkiWebView, AnkiWebViewKind
 from .deck_select import DeckTreeSelect
 from .metrics import collect_snapshot, scope_query, session_summary
 from .policy import DAY, application_blocker
+from .review_layout import LAYOUT_KEY, ReviewLayout
 from .service import (
     analyze,
     apply_confirmed,
@@ -194,15 +195,13 @@ class LearningWorkspace(QWidget):
         self.pages.addWidget(self.overview)
 
         # Reparent the original WebViews, never clone or replace the card renderer.
-        self.native = QWidget()
-        native_layout = QVBoxLayout(self.native)
-        native_layout.setContentsMargins(0, 0, 0, 0)
-        native_layout.setSpacing(0)
         mw_layout = self.mw.mainLayout
         mw_layout.removeWidget(self.mw.web)
         mw_layout.removeWidget(self.mw.bottomWeb)
-        native_layout.addWidget(self.mw.web, 1)
-        native_layout.addWidget(self.mw.bottomWeb)
+        self.native = ReviewLayout(
+            self.mw.web, self.mw.bottomWeb, self.save_review_layout
+        )
+        self.reset_layout_button.clicked.connect(self.native.viewport.reset_layout)
         self.pages.addWidget(self.native)
 
         ai_page = QWidget()
@@ -261,6 +260,9 @@ class LearningWorkspace(QWidget):
         self.review_label.setWordWrap(True)
         review_actions.addWidget(self.review_label, 1)
         review_actions.addWidget(mode_selector(self.mw))
+        self.reset_layout_button = QPushButton("恢复布局")
+        self.reset_layout_button.setToolTip("恢复卡片区域的默认宽度和高度")
+        review_actions.addWidget(self.reset_layout_button)
         self.finish_button = QPushButton("结束复习 · 返回牌组")
         self.finish_button.clicked.connect(lambda: self.mw.moveToState("deckBrowser"))
         review_actions.addWidget(self.finish_button)
@@ -322,6 +324,7 @@ class LearningWorkspace(QWidget):
 
     def profile_open(self) -> None:
         self.generation += 1
+        self.native.viewport.load(self.mw.pm.profile.get(LAYOUT_KEY))
         self.store = LearningStore(Path(self.mw.pm.profileFolder()))
         self.snapshot = None
         self.session = None
@@ -347,8 +350,13 @@ class LearningWorkspace(QWidget):
         self.paused_auto_advance = None
         self.header.hide()
         self.review_bar.hide()
+        self.native.viewport.set_reviewing(False)
         self.pages.setCurrentWidget(self.native)
         self.graph_web.load_url(QUrl("about:blank"))
+
+    def save_review_layout(self, value: dict[str, float]) -> None:
+        self.mw.pm.profile[LAYOUT_KEY] = value
+        self.mw.pm.save()
 
     def fill_decks(self) -> None:
         if not self.mw.col:
@@ -441,6 +449,7 @@ class LearningWorkspace(QWidget):
         if self.mw.state != "review":
             return
         self.header.hide()
+        self.native.viewport.set_reviewing(True)
         self.review_bar.show()
         self.review_label.setText("复习 · " + self.mw.col.decks.current()["name"])
         self.pages.setCurrentWidget(self.native)
@@ -501,6 +510,7 @@ class LearningWorkspace(QWidget):
         elif new in ("deckBrowser", "overview", "resetRequired", "profileManager"):
             self.header.hide()
             self.review_bar.hide()
+            self.native.viewport.set_reviewing(False)
             self.pages.setCurrentWidget(self.native)
             if new == "overview" and old == "review" and not self.legacy_navigation:
                 QTimer.singleShot(

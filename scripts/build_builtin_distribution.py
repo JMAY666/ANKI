@@ -44,6 +44,7 @@ required = [
     "aqt/builtin_features/learning/provider.py",
     "aqt/builtin_features/protected_secrets.py",
     "aqt/builtin_features/learning/deck_select.py",
+    "aqt/builtin_features/learning/review_layout.py",
     "aqt/builtin_features/passfail2/__init__.py",
     "aqt/builtin_features/passfail2/LICENSE",
 ]
@@ -59,6 +60,7 @@ manifest = {
     "fsrs_helper": "26.05.08, prepared checkout 85ad582; runtime c7219f5",
     "passfail2": "0.3.0, AnkiWeb archive fb4c98a63d76384204b59cea75702939cc23b6e7f4eb6c73c307b2a810573c4f; native/two-grade mode switching",
     "learning_workspace": "2: three-column decks, direct native review, searchable statistics scope and confirmed daily DeepSeek suggestions",
+    "review_layout": "1: persistent resizable card viewport, legacy iframe resizing and content-sized review controls",
     "wheels": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in wheels},
     "runtime": "Existing Anki 26.8.1 Windows Python/Qt launcher and dependencies",
 }

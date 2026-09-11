@@ -18,6 +18,18 @@ body {
     padding: 0;
 }
 
+html,
+body {
+    height: auto;
+    min-height: 0;
+}
+
+// This bar is measured by Qt. Override legacy theme padding, retaining room for
+// counts/intervals above the buttons and all existing button hit targets.
+body #outer {
+    padding: 4px 0 !important;
+}
+
 #middle td[align="center"] {
     padding-top: 10px;
     position: relative;
@@ -36,9 +48,22 @@ button {
 
 .stat {
     padding-top: 10px;
+}
 
-    @media (max-width: 583px) {
-        display: none;
+@media (max-width: 583px) {
+    // Keep Edit/More available in small windows, below the rating buttons.
+    #innertable > tbody > tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #middle {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    #innertable > tbody > tr > .stat {
+        grid-row: 2;
     }
 }
 

@@ -25,7 +25,9 @@ Pass/Fail 2 0.3.0 也已内置：复习栏可随时选择原生四档或 Fail／
 
 本机实际使用版本：`dist/Anki-learning-workspace-26.8.1/Anki.exe`。无需单独安装插件；从牌组直接学习，从顶部「统计」查看数据与报告。
 
-导航、牌组三栏、Pass/Fail 切换以及实际软件更新的验证与恢复位置见 [最新交付记录](docs/NAVIGATION-PASSFAIL2-DELIVERY-2026-09-11.md)。
+导航、牌组三栏、Pass/Fail 切换以及对应软件更新的验证与恢复位置见 [导航与评分交付记录](docs/NAVIGATION-PASSFAIL2-DELIVERY-2026-09-11.md)。
+
+复习时可拖动卡片区域左右边缘调整宽度，拖动下边缘调整高度；同一账户会记住布局。顶部「恢复布局」或双击边缘可恢复默认大小。全屏切换会同步调整铺满卡片的旧式内嵌页面，底部按钮栏按实际内容收紧，窄窗中的编辑／更多换行保留。使用与验证见 [复习布局说明](docs/REVIEW-LAYOUT.md)。
 
 ## Getting Started
 

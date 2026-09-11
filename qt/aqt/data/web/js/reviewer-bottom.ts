@@ -10,6 +10,10 @@ let timerStopped = false;
 
 let maxTime = 0;
 
+// Width/theme changes can reflow the buttons after Qt's resize event. Measure
+// the content once Chromium has laid it out, including the narrow-window row.
+let sizeObserver: ResizeObserver | undefined;
+
 function updateTime(): void {
     const timeNode = document.getElementById("time");
     if (maxTime === 0) {
@@ -52,6 +56,10 @@ function showQuestion(txt: string, maxTime_: number): void {
 function showAnswer(txt: string, stopTimer = false): void {
     document.getElementById("middle").innerHTML = txt;
     timerStopped = stopTimer;
+    if (!sizeObserver) {
+        sizeObserver = new ResizeObserver(() => pycmd("reviewBottomSizeChanged"));
+        sizeObserver.observe(document.getElementById("outer"));
+    }
 }
 
 function selectedAnswerButton(): string {

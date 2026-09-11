@@ -353,6 +353,7 @@ class Reviewer:
         # block default drag & drop behavior while allowing drop events to be received by JS handlers
         self.web.allow_drops = True
         self.web.eval("_blockDefaultDragDropBehavior();")
+        self.web.eval("document.documentElement.dataset.reviewLayout = 'true';")
         # show answer / ease buttons
         self.bottom.web.stdHtml(
             self._bottomHTML(),
@@ -682,6 +683,8 @@ class Reviewer:
             self.showContextMenu()
         elif url.startswith("play:"):
             play_clicked_audio(url, self.card)
+        elif url == "reviewBottomSizeChanged":
+            self.bottom.web.adjustHeightToFit()
         elif url.startswith("updateToolbar"):
             self.mw.toolbarWeb.update_background_image()
         elif url == "repaintNeeded":
@@ -855,6 +858,7 @@ timerStopped = false;
         else:
             maxTime = 0
         self.bottom.web.eval("showQuestion(%s,%d);" % (json.dumps(middle), maxTime))
+        self.bottom.web.adjustHeightToFit()
 
     def _showEaseButtons(self) -> None:
         if not self._states_mutated:
@@ -865,6 +869,7 @@ timerStopped = false;
         self.bottom.web.eval(
             f"showAnswer({json.dumps(middle)}, {json.dumps(conf['stopTimerOnAnswer'])});"
         )
+        self.bottom.web.adjustHeightToFit()
 
     def _remaining(self) -> str:
         if not self.mw.col.conf["dueCounts"]:

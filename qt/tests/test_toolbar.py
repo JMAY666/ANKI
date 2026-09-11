@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import cast
 from unittest.mock import MagicMock, patch
 
-from aqt.toolbar import TopWebView
+from aqt.toolbar import BottomWebView, TopWebView
 from aqt.webview import AnkiWebView
 
 
@@ -46,3 +46,22 @@ def test_theme_change_does_not_copy_background_outside_review(
     super_on_theme_did_change.assert_called_once_with()
     web.eval.assert_not_called()
     web.mw.progress.single_shot.assert_not_called()
+
+
+def test_bottom_measurement_does_not_reopen_an_auto_hidden_review_bar() -> None:
+    web = cast(BottomWebView, MagicMock(spec=BottomWebView))
+    web.mw = MagicMock(state="review")
+    web.hidden = True
+    BottomWebView._onHeight(web, 74)
+    assert web.web_height == 74
+    web.setFixedHeight.assert_not_called()
+
+
+def test_bottom_measurement_replaces_a_stale_expansion_height() -> None:
+    web = cast(BottomWebView, MagicMock(spec=BottomWebView))
+    web.mw = MagicMock(state="review")
+    web.hidden = False
+    web.animation = MagicMock()
+    BottomWebView._onHeight(web, 74)
+    web.animation.stop.assert_called_once()
+    web.setFixedHeight.assert_called_once_with(74)

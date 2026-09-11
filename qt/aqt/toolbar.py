@@ -200,6 +200,21 @@ class BottomWebView(ToolbarWebView):
         super().__init__(mw, kind=AnkiWebViewKind.BOTTOM_TOOLBAR)
         qconnect(self.hide_timer.timeout, self.hide_if_allowed)
 
+    def _onHeight(self, qvar: int | None) -> None:
+        if qvar is None:
+            return
+        self.web_height = int(qvar)
+        if self.mw.state == "review" and self.hidden:
+            return
+        if animation := getattr(self, "animation", None):
+            animation.stop()
+        self.setFixedHeight(self.web_height)
+
+    def resizeEvent(self, event: QResizeEvent | None) -> None:
+        super().resizeEvent(event)
+        if event and event.size().width() != event.oldSize().width():
+            self.adjustHeightToFit()
+
     def eventFilter(self, obj, evt):
         if handled := super().eventFilter(obj, evt):
             return handled

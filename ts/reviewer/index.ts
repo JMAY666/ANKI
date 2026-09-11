@@ -21,6 +21,9 @@ import { registerPackage } from "@tslib/runtime-require";
 
 import { allImagesLoaded, preloadAnswerImages } from "./images";
 import { preloadResources } from "./preload";
+import { CardFrameResizer } from "./viewport";
+
+const cardFrameResizer = new CardFrameResizer();
 
 declare const MathJax: any;
 
@@ -168,12 +171,15 @@ export async function _updateQA(
     await preloadResources(html);
 
     qa.style.opacity = "0";
+    cardFrameResizer.clear();
 
     try {
         await setInnerHTML(qa, html);
     } catch (error) {
         await setInnerHTML(qa, renderError("html")(error));
     }
+
+    cardFrameResizer.capture(qa);
 
     await _runHook(onUpdateHook);
 
