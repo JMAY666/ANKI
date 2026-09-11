@@ -356,6 +356,8 @@ def _set_page_transparency(active: bool) -> None:
             if view is not None and view.page() is not None:
                 view.page().setBackgroundColor(color)
                 view.eval(js)
+                if view is getattr(mw, "toolbarWeb", None):
+                    view.use_window_background()
         except Exception:
             pass
 

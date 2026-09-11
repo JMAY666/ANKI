@@ -148,6 +148,8 @@ class TopWebView(ToolbarWebView):
         )
 
     def update_background_image(self) -> None:
+        if self.use_window_background():
+            return
         if self.mw.pm.minimalist_mode():
             return
 
@@ -176,6 +178,23 @@ class TopWebView(ToolbarWebView):
             """window.getComputedStyle(document.body).background; """,
             set_background,
         )
+
+    def use_window_background(self) -> bool:
+        if self.mw.state != "review" or not getattr(
+            self.mw, "learning_workspace", None
+        ):
+            return False
+        # The workspace contains the card in its own viewport. Its background
+        # must not paint a full-width strip behind the navigation controls.
+        self.page().setBackgroundColor(QColor(0, 0, 0, 0))
+        self.eval(
+            """
+            for (const node of [document.documentElement, document.body]) {
+                node.style.setProperty("background", "transparent", "important");
+            }
+            """
+        )
+        return True
 
     def set_body_height(self, height: int) -> None:
         self.eval(
