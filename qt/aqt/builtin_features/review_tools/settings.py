@@ -267,7 +267,7 @@ class ToolSettings(QDialog):
         return values
 
     def validate_shortcuts(self, values: dict) -> None:
-        from aqt.qt import QAction, QKeySequence
+        from aqt.qt import QAction, QKeySequence, QShortcut
 
         from .config import get_config
 
@@ -288,13 +288,28 @@ class ToolSettings(QDialog):
             for sequence in action.shortcuts()
             if not sequence.isEmpty()
         )
+        reserved.update(
+            shortcut.key().toString().lower()
+            for shortcut in self.owner.mw.findChildren(QShortcut)
+            if shortcut not in self.owner.mw.stateShortcuts
+        )
+        reserved.update(("1", "2", "3", "4"))
         conf = values["advanced_review"]
         for label in ("Info", "Skip", "Show Skipped", "Undo"):
             if not conf[f"Button_   {label} Button"]:
                 continue
             raw = conf[f"Button_ Shortcut_ {label} Button"]
             sequence = QKeySequence(re.sub(r"\s*\+\s*", "+", raw)).toString().lower()
-            if raw and (not sequence or sequence in reserved):
+            candidate = QKeySequence(sequence)
+            conflict = any(
+                candidate.matches(QKeySequence(key))
+                != QKeySequence.SequenceMatch.NoMatch
+                or QKeySequence(key).matches(candidate)
+                != QKeySequence.SequenceMatch.NoMatch
+                for key in reserved
+                if key
+            )
+            if raw and (not sequence or conflict):
                 raise ValueError(
                     f"{tr(label)} 快捷键 {raw!r} 与现有操作冲突，请修改或清空。"
                 )

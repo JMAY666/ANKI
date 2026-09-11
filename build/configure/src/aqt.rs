@@ -196,6 +196,7 @@ fn build_js(build: &mut Build) -> Result<()> {
             ":ts:editor",
             ":ts:editable",
             ":ts:reviewer:reviewer.js",
+            ":ts:reviewer:reviewer-shortcuts.js",
             ":ts:mathjax"
         ],
         ".js",

@@ -13,6 +13,17 @@ builtin-run *args: build
 builtin-test:
     & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py
 
+review-shortcuts-test:
+    $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_review_shortcuts.py
+
+review-shortcuts-smoke run_name:
+    & "out/pyenv/Scripts/python.exe" scripts/review_shortcuts_smoke.py {{run_name}}
+
+review-shortcuts-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/review_shortcuts.py qt/aqt/reviewer.py qt/aqt/main.py qt/aqt/preferences.py qt/aqt/builtin_features/passfail2/__init__.py qt/aqt/builtin_features/review_tools/settings.py qt/aqt/builtin_features/review_tools/i18n.py qt/tests/test_review_shortcuts.py scripts/review_shortcuts_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/review_shortcuts.py qt/aqt/reviewer.py qt/aqt/main.py qt/aqt/preferences.py qt/aqt/builtin_features/passfail2/__init__.py qt/aqt/builtin_features/review_tools/settings.py qt/aqt/builtin_features/review_tools/i18n.py qt/tests/test_review_shortcuts.py scripts/review_shortcuts_smoke.py
+    & "node_modules/.bin/dprint.cmd" fmt ts/lib/tslib/review-shortcuts.ts ts/lib/tslib/review-shortcuts.test.ts ts/reviewer/index.ts qt/aqt/data/web/js/reviewer-bottom.ts
+
 review-tools-test:
     & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py test_review_tools.py
 

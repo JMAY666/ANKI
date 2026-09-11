@@ -180,9 +180,11 @@ def _answerButtons(self):
             bottombar_table = ""
         else:
             bottombar_table = ""
+        from aqt.builtin_features.passfail2 import answer_key_hint
+        key_hint = escape(answer_key_hint(self, i, self.mw.pm.get_answer_key(i)) or "", quote=True)
         return style + button_styles + f'''
 <td align=center style="padding-top: 0px">{due}
-<button title="快捷键： {i}" data-ease="{i}" onclick='pycmd("ease{i}");' class={button_class} id={button_id} {extra}>{label}{inButton_due}</button>
+<button title="快捷键： {key_hint}" data-ease="{i}" onclick='pycmd("ease{i}");' class={button_class} id={button_id} {extra}>{label}{inButton_due}</button>
 </td>'''
     #// adjusting the answer button table for wide button
     if button_style == 2 or button_style == 3:

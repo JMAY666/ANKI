@@ -269,6 +269,16 @@ fn build_and_check_reviewer(build: &mut Build) -> Result<()> {
         },
     )?;
     build.add_action(
+        "ts:reviewer:reviewer-shortcuts.js",
+        EsbuildScript {
+            script: inputs!["ts/bundle_ts.mjs"],
+            entrypoint: "ts/reviewer/shortcuts_wrapper.ts".into(),
+            output_stem: "ts/reviewer/reviewer-shortcuts",
+            deps: reviewer_deps.clone(),
+            extra_exts: &[],
+        },
+    )?;
+    build.add_action(
         "ts:reviewer:reviewer.css",
         CompileSass {
             input: inputs!["ts/reviewer/reviewer.scss"],

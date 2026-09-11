@@ -169,6 +169,10 @@ class Reviewer:
         self._show_question_timer: QTimer | None = None
         self._show_answer_timer: QTimer | None = None
         self.auto_advance_enabled = False
+        from aqt.review_shortcuts import ReviewShortcutGuard
+
+        self.shortcuts = ReviewShortcutGuard(self)
+        self._pending_typed_answer: object | None = None
         gui_hooks.av_player_did_end_playing.append(self._on_av_player_did_end_playing)
 
     def show(self) -> None:
@@ -196,6 +200,8 @@ class Reviewer:
         return None
 
     def cleanup(self) -> None:
+        self.shortcuts.invalidate()
+        self._pending_typed_answer = None
         gui_hooks.reviewer_will_end()
         self.card = None
         self.auto_advance_enabled = False
@@ -358,7 +364,11 @@ class Reviewer:
         self.bottom.web.stdHtml(
             self._bottomHTML(),
             css=["css/toolbar-bottom.css", "css/reviewer-bottom.css"],
-            js=["js/vendor/jquery.min.js", "js/reviewer-bottom.js"],
+            js=[
+                "js/vendor/jquery.min.js",
+                "js/reviewer-shortcuts.js",
+                "js/reviewer-bottom.js",
+            ],
             context=ReviewerBottomBar(self),
         )
 
@@ -369,6 +379,8 @@ class Reviewer:
         return self.typeAnsFilter(self.mw.prepare_card_text_for_display(buf))
 
     def _showQuestion(self) -> None:
+        self.shortcuts.invalidate()
+        self._pending_typed_answer = None
         self._reps += 1
         self.state = "question"
         self.typedAnswer: str | None = None
@@ -459,9 +471,14 @@ class Reviewer:
     ##########################################################################
 
     def _showAnswer(self) -> None:
-        if self.mw.state != "review":
+        if (
+            self.mw.state != "review"
+            or self.state != "question"
+            or not self.mw.bottomWeb.review_controls_active()
+        ):
             # showing resetRequired screen; ignore space
             return
+        self.shortcuts.invalidate()
         self.state = "answer"
         c = self.card
         a = c.answer()
@@ -594,12 +611,17 @@ class Reviewer:
 
     def _shortcutKeys(
         self,
+        include_answers: bool = True,
+        include_tools: bool = True,
     ) -> Sequence[tuple[str, Callable] | tuple[Qt.Key, Callable]]:
         def generate_default_answer_keys() -> Generator[
             tuple[str, partial], None, None
         ]:
-            for ease in aqt.mw.pm.default_answer_keys:
-                key = aqt.mw.pm.get_answer_key(ease)
+            from aqt.builtin_features.passfail2 import answer_shortcut_keys
+
+            if not include_answers:
+                return
+            for ease, key in answer_shortcut_keys(self).items():
                 if not key:
                     continue
                 ease = cast(Literal[1, 2, 3, 4], ease)
@@ -608,7 +630,7 @@ class Reviewer:
 
         from aqt.builtin_features.review_tools import shortcuts
 
-        return shortcuts(
+        return (shortcuts if include_tools else lambda _reviewer, keys: keys)(
             self,
             [
                 ("e", self.mw.onEditCurrent),
@@ -666,22 +688,13 @@ class Reviewer:
     def onEnterKey(self) -> None:
         if self.state == "question":
             self._getTypedAnswer()
-        elif self.state == "answer" and aqt.mw.pm.spacebar_rates_card():
-            self.bottom.web.evalWithCallback(
-                "selectedAnswerButton()", self._onAnswerButton
-            )
-
-    def _onAnswerButton(self, val: str) -> None:
-        # button selected?
-        if val and val in "1234":
-            val2: Literal[1, 2, 3, 4] = int(val)  # type: ignore
-            self._answerCard(val2)
-        else:
-            self._answerCard(self._defaultEase())
 
     def _linkHandler(self, url: str) -> None:
         from aqt.builtin_features.review_tools import command
 
+        if url == "reviewShortcut:show":
+            self.shortcuts.run(self.onEnterKey)
+            return
         if command(self, url):
             return
         if (
@@ -762,7 +775,7 @@ class Reviewer:
             self.typeAnsPat,
             f"""
 <center>
-<input type=text id=typeans onkeypress="_typeAnsPress();"
+<input type=text id=typeans
    style="font-family: '{self.typeFont}'; font-size: {self.typeSize}px;">
 </center>
 """,
@@ -817,9 +830,28 @@ class Reviewer:
         return self.mw.col.extract_cloze_for_typing(txt, idx) or None
 
     def _getTypedAnswer(self) -> None:
-        self.web.evalWithCallback("getTypedAnswer();", self._onTypedAnswer)
+        if (
+            self.state != "question"
+            or not self.mw.bottomWeb.review_controls_active()
+            or self._pending_typed_answer is not None
+        ):
+            return
+        ticket = self._pending_typed_answer = object()
+        snapshot = self.shortcuts.snapshot()
 
-    def _onTypedAnswer(self, val: None) -> None:
+        def received(value: str | None) -> None:
+            if self._pending_typed_answer is not ticket:
+                return
+            self._pending_typed_answer = None
+            if (
+                self.shortcuts.snapshot() == snapshot
+                and self.mw.bottomWeb.review_controls_active()
+            ):
+                self._onTypedAnswer(value)
+
+        self.web.evalWithCallback("getTypedAnswer();", received)
+
+    def _onTypedAnswer(self, val: str | None) -> None:
         self.typedAnswer = val or ""
         self._showAnswer()
 

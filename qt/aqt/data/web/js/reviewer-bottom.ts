@@ -5,6 +5,11 @@
 @typescript-eslint/no-unused-vars: "off",
 */
 
+declare function installReviewShortcutGuard(enabled: () => boolean, side: () => string): void;
+
+let side = "question";
+installReviewShortcutGuard(() => true, () => side);
+
 let time: number; // set in python code
 let timerStopped = false;
 
@@ -37,6 +42,7 @@ let intervalId: number | undefined;
 
 function showQuestion(txt: string, maxTime_: number): void {
     showAnswer(txt);
+    side = "question";
     time = 0;
     maxTime = maxTime_;
     updateTime();
@@ -54,6 +60,7 @@ function showQuestion(txt: string, maxTime_: number): void {
 }
 
 function showAnswer(txt: string, stopTimer = false): void {
+    side = "answer";
     document.getElementById("middle").innerHTML = txt;
     timerStopped = stopTimer;
     if (!sizeObserver) {

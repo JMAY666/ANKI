@@ -466,6 +466,7 @@ class LearningWorkspace(QWidget):
     def review_visibility(self, visible: bool) -> None:
         if self.mw.state != "review":
             return
+        self.mw.reviewer.shortcuts.invalidate()
         self.mw.bottomWeb.set_review_page_visible(visible)
         self.mw.review_tools.visibility_changed()
         if visible:

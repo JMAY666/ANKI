@@ -1224,11 +1224,20 @@ title="{}" {}>{}</button>""".format(
         return tuple({QKeySequence(key): fn for key, fn in shortcuts}.items())
 
     def applyShortcuts(
-        self, shortcuts: Sequence[tuple[str, Callable]]
+        self, shortcuts: Sequence[tuple[str, Callable]], review_only: bool = False
     ) -> list[QShortcut]:
         qshortcuts = []
         for key, fn in self._normalize_shortcuts(shortcuts):
-            scut = QShortcut(key, self, activated=fn)  # type: ignore
+
+            def dispatch(fn: Callable = fn) -> None:
+                if review_only or (
+                    self.state == "review" and self.bottomWeb.review_controls_active()
+                ):
+                    self.reviewer.shortcuts.run(fn)
+                else:
+                    fn()
+
+            scut = QShortcut(key, self, activated=dispatch)  # type: ignore
             scut.setAutoRepeat(False)
             qshortcuts.append(scut)
         return qshortcuts
@@ -1237,9 +1246,13 @@ title="{}" {}>{}</button>""".format(
         gui_hooks.state_shortcuts_will_change(self.state, shortcuts)
         # legacy hook
         runHook(f"{self.state}StateShortcuts", shortcuts)
-        self.stateShortcuts = self.applyShortcuts(shortcuts)
+        self.stateShortcuts = self.applyShortcuts(
+            shortcuts, review_only=self.state == "review"
+        )
 
     def clearStateShortcuts(self) -> None:
+        if reviewer := getattr(self, "reviewer", None):
+            reviewer.shortcuts.invalidate()
         for qs in self.stateShortcuts:
             sip.delete(qs)  # type: ignore
         self.stateShortcuts = []

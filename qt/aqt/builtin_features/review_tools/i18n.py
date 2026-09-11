@@ -5,6 +5,8 @@
 import re
 
 TEXT = {
+    "Four-grade shortcuts below; two grades use 1 = Fail, 2 = Pass. Space / Enter only shows the answer.": "以下快捷键用于四档评分；两档固定为 1 失败、2 通过。空格／Enter 仅在正面显示答案。",
+    "Invalid or conflicting rating shortcuts:": "评分快捷键无效或与现有操作冲突：",
     "Again": "重来",
     "Hard": "困难",
     "Good": "良好",

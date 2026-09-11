@@ -538,7 +538,7 @@ try:
         )
         screenshot("passfail-answer")
         before = col.db.scalar("SELECT COUNT(*) FROM revlog")
-        for key in (Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4):
+        for key in (Qt.Key.Key_2, Qt.Key.Key_2, Qt.Key.Key_2):
             if mw.reviewer.state == "question":
                 mw.reviewer._showAnswer()
             wait(lambda: mw.reviewer.state == "answer" and buttons() == [1, 3])
@@ -553,7 +553,7 @@ try:
                 )
             )
         check(
-            "keys 2 3 4 each record native Good once in selected deck",
+            "three separate presses of key 2 each record native Good once in selected deck",
             col.db.list("SELECT ease FROM revlog ORDER BY id") == [3, 3, 3]
             and col.db.scalar(
                 "SELECT COUNT(*) FROM revlog r JOIN cards c ON c.id=r.cid WHERE c.did!=?",

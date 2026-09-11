@@ -12,6 +12,7 @@ from aqt.qt import *
 from aqt.utils import downArrow, shortcut, showInfo
 from aqt.reviewer import Reviewer
 from . import styles
+from .. import advanced_shortcut_hint
 
 
 # getting config information
@@ -110,7 +111,7 @@ elif bottombarButtons_style == 4:
 # info button | written in a separate functions to preserve the original bottombar
 def info_button():
     if info:
-        return f"""<button title="快捷键： {info_shortcut.upper()}" onclick="pycmd('builtinReview:card_info');" {info_style}>{info_label}</button>"""
+        return f"""<button title="快捷键： {escape(advanced_shortcut_hint(mw.reviewer, 'Info'), quote=True)}" onclick="pycmd('builtinReview:card_info');" {info_style}>{info_label}</button>"""
     else:
         return ""
 
@@ -118,14 +119,14 @@ def info_button():
 # skip button | written in a separate functions to preserve the original bottombar
 def skip_button():
     if skip:
-        return f"""<button title="快捷键： {skip_shortcut.upper()}" onclick="pycmd('builtinReview:skip');" {skip_style}>{skip_label}</button>"""
+        return f"""<button title="快捷键： {escape(advanced_shortcut_hint(mw.reviewer, 'Skip'), quote=True)}" onclick="pycmd('builtinReview:skip');" {skip_style}>{skip_label}</button>"""
     else:
         return ""
 
 # Show Skipped button
 def showSkipped_button():
     if showSkipped:
-        return f"""<button title="快捷键： {showSkipped_shortcut.upper()}" onclick="pycmd('builtinReview:showSkipped');" {showSkipped_style}>{showSkipped_label}</button>"""
+        return f"""<button title="快捷键： {escape(advanced_shortcut_hint(mw.reviewer, 'Show Skipped'), quote=True)}" onclick="pycmd('builtinReview:showSkipped');" {showSkipped_style}>{showSkipped_label}</button>"""
     else:
         return ""
 
@@ -133,7 +134,7 @@ def showSkipped_button():
 # undo button
 def undo_button():
     if undo:
-        return f"""<button title="快捷键： {undo_shortcut}" onclick="pycmd('builtinReview:undo');" {undo_style}>{undo_label}</button>"""
+        return f"""<button title="快捷键： {escape(advanced_shortcut_hint(mw.reviewer, 'Undo'), quote=True)}" onclick="pycmd('builtinReview:undo');" {undo_style}>{undo_label}</button>"""
     else:
         return ""
 

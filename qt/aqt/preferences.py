@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import functools
 import re
 from collections.abc import Callable
 from copy import deepcopy
@@ -91,6 +90,16 @@ class Preferences(QDialog):
         )
         group = self.form.preferences_answer_keys
         group.setLayout(layout := QFormLayout())
+        self.answer_key_edits: dict[int, QLineEdit] = {}
+        from aqt.builtin_features.review_tools.i18n import tr as tool_tr
+
+        notice = QLabel(
+            tool_tr(
+                "Four-grade shortcuts below; two grades use 1 = Fail, 2 = Pass. Space / Enter only shows the answer."
+            )
+        )
+        notice.setWordWrap(True)
+        layout.addRow(notice)
         tab_widget: QWidget = self.form.url_schemes
         for ease, label in ease_labels:
             layout.addRow(
@@ -99,10 +108,7 @@ class Preferences(QDialog):
             )
             QWidget.setTabOrder(tab_widget, line_edit)
             tab_widget = line_edit
-            qconnect(
-                line_edit.textChanged,
-                functools.partial(self.mw.pm.set_answer_key, ease),
-            )
+            self.answer_key_edits[ease] = line_edit
             line_edit.setPlaceholderText(tr.preferences_shortcut_placeholder())
 
     def accept(self) -> None:
@@ -113,12 +119,34 @@ class Preferences(QDialog):
         if not self.mw.col:
             return
 
+        from aqt.builtin_features.review_tools.i18n import tr as tool_tr
+        from aqt.review_shortcuts import answer_key_errors
+
+        keys = {
+            ease: edit.text().strip() for ease, edit in self.answer_key_edits.items()
+        }
+        if errors := answer_key_errors(self.mw.reviewer, keys):
+            showWarning(
+                tool_tr("Invalid or conflicting rating shortcuts:")
+                + " "
+                + ", ".join(keys[ease] for ease in sorted(errors)),
+                parent=self,
+            )
+            return
+        for ease, key in keys.items():
+            self.mw.pm.set_answer_key(ease, key)
+
         def after_collection_update() -> None:
             self.update_profile()
             self.update_global()
             self.mw.pm.save()
             self.done(0)
             aqt.dialogs.markClosed("Preferences")
+            if self.mw.state == "review" and self.mw.bottomWeb.review_controls_active():
+                self.mw.clearStateShortcuts()
+                self.mw.setStateShortcuts(self.mw.reviewer._shortcutKeys())  # type: ignore[arg-type]
+                if self.mw.reviewer.state == "answer":
+                    self.mw.reviewer._showEaseButtons()
 
             if callback:
                 callback()
@@ -336,11 +364,9 @@ class Preferences(QDialog):
         self.form.minimalist_mode.setChecked(self.mw.pm.minimalist_mode())
         qconnect(self.form.minimalist_mode.stateChanged, self.mw.pm.set_minimalist_mode)
 
-        self.form.spacebar_rates_card.setChecked(self.mw.pm.spacebar_rates_card())
-        qconnect(
-            self.form.spacebar_rates_card.stateChanged,
-            self.mw.pm.set_spacebar_rates_card,
-        )
+        # Retain the stored legacy preference for data compatibility; the
+        # reviewer now always requires an explicit rating key or mouse click.
+        self.form.spacebar_rates_card.hide()
 
         hide_choices = [tr.preferences_full_screen_only(), tr.preferences_always()]
 

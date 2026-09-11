@@ -17,6 +17,7 @@ globalThis.anki.imageOcclusion = imageOcclusionAPI;
 globalThis.anki.setupImageCloze = imageOcclusionAPI.setup; // deprecated
 
 import { bridgeCommand } from "@tslib/bridgecommand";
+import { installReviewShortcutGuard } from "@tslib/review-shortcuts";
 import { registerPackage } from "@tslib/runtime-require";
 
 import { allImagesLoaded, preloadAnswerImages } from "./images";
@@ -24,6 +25,8 @@ import { preloadResources } from "./preload";
 import { CardFrameResizer } from "./viewport";
 
 const cardFrameResizer = new CardFrameResizer();
+let reviewSide = "question";
+installReviewShortcutGuard(() => document.documentElement.dataset.reviewLayout === "true", () => reviewSide);
 
 declare const MathJax: any;
 
@@ -204,6 +207,7 @@ export async function _updateQA(
 }
 
 export function _showQuestion(q: string, a: string, bodyclass: string): void {
+    reviewSide = "question";
     _queueAction(() =>
         _updateQA(
             q,
@@ -236,6 +240,7 @@ function scrollToAnswer(): void {
 }
 
 export function _showAnswer(a: string, bodyclass: string): void {
+    reviewSide = "answer";
     _queueAction(() =>
         _updateQA(
             a,
@@ -267,10 +272,7 @@ export function _drawMark(mark: boolean): void {
 }
 
 export function _typeAnsPress(): void {
-    const key = (window.event as KeyboardEvent).key;
-    if (key === "Enter") {
-        bridgeCommand("ans");
-    }
+    // Kept for existing templates. Typing/IME confirmation never flips a card.
 }
 
 export function _emulateMobile(enabled: boolean): void {

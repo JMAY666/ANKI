@@ -206,7 +206,11 @@ class ReviewTools(QObject):
             reviewer.bottom.web.stdHtml(
                 reviewer._bottomHTML(),
                 css=["css/toolbar-bottom.css", "css/reviewer-bottom.css"],
-                js=["js/vendor/jquery.min.js", "js/reviewer-bottom.js"],
+                js=[
+                    "js/vendor/jquery.min.js",
+                    "js/reviewer-shortcuts.js",
+                    "js/reviewer-bottom.js",
+                ],
                 context=ReviewerBottomBar(reviewer),
             )
             if reviewer.state == "answer":
@@ -336,10 +340,33 @@ def shortcuts(reviewer: Any, original: list) -> list:
         or get_config("policy")["style"] != "advanced"
     ):
         return original
-    from aqt.qt import QKeySequence
+    for _label, action, sequence in advanced_shortcut_entries(reviewer, original):
+        original.append(
+            (
+                sequence,
+                lambda action=action: command(reviewer, "builtinReview:" + action),
+            )
+        )
+    return original
 
-    existing = {QKeySequence(key).toString().lower() for key, _ in original}
+
+def advanced_shortcut_entries(reviewer: Any, original: list) -> list:
+    from aqt.qt import QAction, QKeySequence, QShortcut
+
+    existing = [QKeySequence(key) for key, _ in original]
+    existing.extend(QKeySequence(str(key)) for key in (1, 2, 3, 4))
+    existing.extend(
+        shortcut.key()
+        for shortcut in reviewer.mw.findChildren(QShortcut)
+        if shortcut not in reviewer.mw.stateShortcuts
+    )
+    existing.extend(
+        key
+        for action in reviewer.mw.findChildren(QAction)
+        for key in action.shortcuts()
+    )
     conf = get_config("advanced_review")
+    entries = []
     for key, action in (
         ("Info", "card_info"),
         ("Skip", "skip"),
@@ -347,13 +374,23 @@ def shortcuts(reviewer: Any, original: list) -> list:
         ("Undo", "undo"),
     ):
         sequence = re.sub(r"\s*\+\s*", "+", conf[f"Button_ Shortcut_ {key} Button"])
-        canonical = QKeySequence(sequence).toString().lower()
-        if conf[f"Button_   {key} Button"] and canonical and canonical not in existing:
-            original.append(
-                (
-                    sequence,
-                    lambda action=action: command(reviewer, "builtinReview:" + action),
-                )
+        canonical = QKeySequence(sequence)
+        conflict = any(
+            not other.isEmpty()
+            and (
+                canonical.matches(other) != QKeySequence.SequenceMatch.NoMatch
+                or other.matches(canonical) != QKeySequence.SequenceMatch.NoMatch
             )
-            existing.add(canonical)
-    return original
+            for other in existing
+        )
+        if conf[f"Button_   {key} Button"] and canonical.toString() and not conflict:
+            entries.append((key, action, sequence))
+            existing.append(canonical)
+    return entries
+
+
+def advanced_shortcut_hint(reviewer: Any, label: str) -> str:
+    entries = advanced_shortcut_entries(
+        reviewer, list(reviewer._shortcutKeys(include_tools=False))
+    )
+    return next((sequence for key, _action, sequence in entries if key == label), "")

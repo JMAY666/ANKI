@@ -107,6 +107,10 @@ class PassFailController(QObject):
         self.changed.emit()
         # Redraw only the controls: keep the card, face, timer and scheduler state.
         reviewer = self.mw.reviewer
+        reviewer.shortcuts.invalidate()
+        if self.mw.state == "review" and self.mw.bottomWeb.review_controls_active():
+            self.mw.clearStateShortcuts()
+            self.mw.setStateShortcuts(reviewer._shortcutKeys())
         if self.mw.state == "review" and reviewer.state == "answer":
             reviewer._showEaseButtons()
 
@@ -123,7 +127,7 @@ def mode_selector(mw: Any) -> QComboBox:
     selector.addItem("原生四档评分", False)
     selector.addItem("通过／失败两档评分", True)
     selector.setToolTip(
-        "两档模式：失败=重来；通过=原生默认评分。原评分键 2、3、4 均提交“通过”。"
+        "两档模式：1=失败（重来）；2=通过（良好）。3、4 不评分；空格或 Enter 仅在正面显示答案。"
     )
 
     def sync() -> None:
@@ -148,11 +152,20 @@ def mode_selector(mw: Any) -> QComboBox:
 
 def answer_key_hint(reviewer: Any, ease: int, fallback: str) -> str:
     control = getattr(reviewer.mw, "passfail2", None)
-    if control and control.value["enabled"] and ease == reviewer._defaultEase():
-        return " / ".join(
-            filter(None, (reviewer.mw.pm.get_answer_key(i) for i in (2, 3, 4)))
-        )
-    return fallback
+    if control and control.value["enabled"]:
+        return "1" if ease == 1 else "2" if ease == reviewer._defaultEase() else ""
+    return answer_shortcut_keys(reviewer).get(ease) or ""
+
+
+def answer_shortcut_keys(reviewer: Any) -> dict[int, str | None]:
+    control = getattr(reviewer.mw, "passfail2", None)
+    if control and control.value["enabled"]:
+        return {1: "1", reviewer._defaultEase(): "2"}
+    from aqt.review_shortcuts import answer_key_errors
+
+    keys = {ease: reviewer.mw.pm.get_answer_key(ease) for ease in (1, 2, 3, 4)}
+    errors = answer_key_errors(reviewer, keys)
+    return {ease: key for ease, key in keys.items() if ease not in errors}
 
 
 class SettingsDialog(QDialog):
