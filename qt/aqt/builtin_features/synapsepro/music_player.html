@@ -253,6 +253,9 @@
 
   <!-- ── SOUNDCLOUD (chrome only; the widget itself is a Qt view below) ── -->
   <div class="panel" id="panel-sc">
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0" title="歌单最后一首结束后回到第一首；单曲链接不循环">
+      <input type="checkbox" id="sc-loop">歌单循环
+    </label>
     <div class="pills" id="sc-pills"></div>
     <div class="urlrow" id="sc-urlrow">
       <input type="text" id="sc-url" placeholder="https://soundcloud.com/...">
@@ -542,6 +545,7 @@
       el('sc-vol').value = st.scVolume != null ? st.scVolume : _volVal;
       _sliderFill(el('sc-vol'));
       el('resume-toggle').checked = (st.resume !== false);
+      el('sc-loop').checked = !!D.sc.loop;
       _scUrl = D.sc.url || '';
       refreshBar();
 
@@ -553,6 +557,7 @@
   };
 
   /* ── wiring ── */
+  el('sc-loop').addEventListener('change', function(){ send({a:'scLoop', on:this.checked}); });
   el('seg-local').addEventListener('click', function(){ setMode('local'); send({a:'mode', m:'local'}); });
   el('seg-sc').addEventListener('click', function(){ if(!this.disabled){ setMode('sc'); send({a:'mode', m:'soundcloud'}); } });
   el('btn-play').addEventListener('click', function(){ send({a: _playing ? 'pause' : 'play'}); });

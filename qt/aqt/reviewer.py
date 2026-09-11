@@ -27,6 +27,7 @@ from anki.scheduler.v3 import (
     SetSchedulingStatesRequest,
 )
 from anki.scheduler.v3 import Scheduler as V3Scheduler
+from anki.sound import AVTag
 from anki.tags import MARKED_TAG
 from anki.types import assert_exhaustive
 from anki.utils import is_mac
@@ -152,6 +153,10 @@ class Reviewer:
         self.web = mw.web
         self.card: Card | None = None
         self.previous_card: Card | None = None
+        self._audio_revision = 0
+        self._pending_visible_audio: (
+            tuple[int, Card | None, str, list[AVTag]] | None
+        ) = None
         self._answeredIds: list[CardId] = []
         self._recordedAudio: str | None = None
         self._combining: bool = True
@@ -200,6 +205,7 @@ class Reviewer:
         return None
 
     def cleanup(self) -> None:
+        self._cancel_pending_audio()
         self.shortcuts.invalidate()
         self._pending_typed_answer = None
         gui_hooks.reviewer_will_end()
@@ -251,6 +257,7 @@ class Reviewer:
     ##########################################################################
 
     def nextCard(self) -> None:
+        self._cancel_pending_audio()
         self.previous_card = self.card
         self.card = None
         self._v3 = None
@@ -379,6 +386,7 @@ class Reviewer:
         return self.typeAnsFilter(self.mw.prepare_card_text_for_display(buf))
 
     def _showQuestion(self) -> None:
+        self._cancel_pending_audio()
         self.shortcuts.invalidate()
         self._pending_typed_answer = None
         self._reps += 1
@@ -397,7 +405,7 @@ class Reviewer:
             sounds = []
             gui_hooks.reviewer_will_play_question_sounds(c, sounds)
         gui_hooks.av_player_will_play_tags(sounds, self.state, self)
-        av_player.play_tags(sounds)
+        self._pending_visible_audio = (self._audio_revision, c, self.state, sounds)
         # render & update bottom
         q = self._mungeQA(q)
         q = gui_hooks.card_will_show(q, c, "reviewQuestion")
@@ -407,7 +415,7 @@ class Reviewer:
         a = self.mw.col.media.escape_media_filenames(c.answer())
 
         self.web.eval(
-            f"_showQuestion({json.dumps(q)}, {json.dumps(a)}, '{bodyclass}');"
+            f"_showQuestion({json.dumps(q)}, {json.dumps(a)}, '{bodyclass}', {self._audio_revision});"
         )
         self._update_flag_icon()
         self._update_mark_icon()
@@ -415,7 +423,33 @@ class Reviewer:
         self.mw.web.setFocus()
         # user hook
         gui_hooks.reviewer_did_show_question(c)
-        self._auto_advance_to_answer_if_enabled()
+
+    def _cancel_pending_audio(self) -> None:
+        self._audio_revision = getattr(self, "_audio_revision", 0) + 1
+        self._pending_visible_audio = None
+        self._clear_auto_advance_timers()
+        av_player.stop_and_clear_queue()
+
+    def _play_visible_audio(self, revision: str) -> None:
+        pending = getattr(self, "_pending_visible_audio", None)
+        if not pending:
+            return
+        token, card, side, sounds = pending
+        if (
+            str(token) != revision
+            or self.card is not card
+            or self.state != side
+            or self.mw.state != "review"
+            or not self.web.isVisible()
+            or not self.mw.bottomWeb.review_controls_active()
+        ):
+            return
+        self._pending_visible_audio = None
+        av_player.play_tags(sounds)
+        if side == "question":
+            self._auto_advance_to_answer_if_enabled()
+        else:
+            self._auto_advance_to_question_if_enabled()
 
     def _auto_advance_to_answer_if_enabled(self) -> None:
         self._clear_auto_advance_timers()
@@ -480,6 +514,7 @@ class Reviewer:
             return
         self.shortcuts.invalidate()
         self.state = "answer"
+        self._cancel_pending_audio()
         c = self.card
         a = c.answer()
         # play audio?
@@ -490,16 +525,15 @@ class Reviewer:
             sounds = []
             gui_hooks.reviewer_will_play_answer_sounds(c, sounds)
         gui_hooks.av_player_will_play_tags(sounds, self.state, self)
-        av_player.play_tags(sounds)
+        self._pending_visible_audio = (self._audio_revision, c, self.state, sounds)
         a = self._mungeQA(a)
         a = gui_hooks.card_will_show(a, c, "reviewAnswer")
         # render and update bottom
-        self.web.eval(f"_showAnswer({json.dumps(a)});")
+        self.web.eval(f"_showAnswer({json.dumps(a)}, '', {self._audio_revision});")
         self._showEaseButtons()
         self.mw.web.setFocus()
         # user hook
         gui_hooks.reviewer_did_show_answer(c)
-        self._auto_advance_to_question_if_enabled()
 
     def _auto_advance_to_question_if_enabled(self) -> None:
         self._clear_auto_advance_timers()
@@ -692,6 +726,9 @@ class Reviewer:
     def _linkHandler(self, url: str) -> None:
         from aqt.builtin_features.review_tools import command
 
+        if url.startswith("reviewVisible:"):
+            self._play_visible_audio(url.removeprefix("reviewVisible:"))
+            return
         if url == "reviewShortcut:show":
             self.shortcuts.run(self.onEnterKey)
             return

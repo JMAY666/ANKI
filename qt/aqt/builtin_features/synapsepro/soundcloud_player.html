@@ -62,6 +62,29 @@
   var _pendingLoad = null;
   var _pendingVolume = null;
   var _playAfterLoad = false;
+  var _playlistLoop = false;
+  var _controlRevision = 0;
+
+  function scSetLoop(enabled) {
+    _playlistLoop = !!enabled;
+    _controlRevision++;
+  }
+
+  function finishTrack() {
+    _st().playing = false;
+    bridge({ type: "finish" });
+    var revision = ++_controlRevision;
+    if (!_playlistLoop || !_widgetReady || _loadingUrl) return;
+    widget.getSounds(function(sounds) {
+      if (revision !== _controlRevision || !sounds || sounds.length < 2) return;
+      widget.getCurrentSoundIndex(function(index) {
+        if (revision !== _controlRevision || !_playlistLoop || index !== sounds.length - 1) return;
+        // Leave normal intermediate-track advancement to the official widget.
+        widget.skip(0);
+        widget.play();
+      });
+    });
+  }
 
   function bridge(obj) {
     try { console.log("SCBRIDGE:" + JSON.stringify(obj)); } catch (e) {}
@@ -111,9 +134,9 @@
       sendTrack();
       if (!_loadingUrl) flushPendingControls();
     });
-    widget.bind(E.PLAY,  function () { _st().playing = true; bridge({ type: "state", playing: true }); sendTrack(); });
-    widget.bind(E.PAUSE, function () { _st().playing = false; bridge({ type: "state", playing: false }); });
-    widget.bind(E.FINISH, function () { _st().playing = false; bridge({ type: "finish" }); });
+    widget.bind(E.PLAY,  function () { _controlRevision++; _st().playing = true; bridge({ type: "state", playing: true }); sendTrack(); });
+    widget.bind(E.PAUSE, function () { _controlRevision++; _st().playing = false; bridge({ type: "state", playing: false }); });
+    widget.bind(E.FINISH, finishTrack);
     if (E.ERROR) {
       widget.bind(E.ERROR, function () {
         _loadingUrl = "";
@@ -139,19 +162,22 @@
 
   // ── Public control surface (called from Python) ──────────────────────────
   function scPlay() {
+    _controlRevision++;
     if (!_widgetReady) { _playAfterLoad = true; return; }
     if (widget) try { widget.play(); } catch (e) {}
   }
   function scPause() {
+    _controlRevision++;
     _playAfterLoad = false;
     if (_widgetReady && widget) try { widget.pause(); } catch (e) {}
   }
   function scToggle() {
+    _controlRevision++;
     if (!_widgetReady) { _playAfterLoad = true; return; }
     if (widget) try { widget.toggle(); } catch (e) {}
   }
-  function scNext()   { if (_widgetReady && widget) try { widget.next(); }  catch (e) {} }
-  function scPrev()   { if (_widgetReady && widget) try { widget.prev(); }  catch (e) {} }
+  function scNext()   { _controlRevision++; if (_widgetReady && widget) try { widget.next(); }  catch (e) {} }
+  function scPrev()   { _controlRevision++; if (_widgetReady && widget) try { widget.prev(); }  catch (e) {} }
 
   function scVolume(v) {
     var vol = Math.max(0, Math.min(100, v));
@@ -217,6 +243,7 @@
   // Reload the widget with a new SoundCloud track / playlist / user URL.
   // Calls made before READY are retained instead of being silently dropped.
   function scLoad(url, autoplay) {
+    _controlRevision++;
     if (!url) return;
     if (_loadingUrl === url) {
       if (autoplay) _playAfterLoad = true;

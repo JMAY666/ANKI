@@ -214,11 +214,13 @@ def save_addon_settings():
         with open(tmp_path, 'w', encoding='utf-8') as f:
             json.dump(addon_settings, f, indent=4)
         os.replace(tmp_path, addon_settings_path)
+        return True
     except Exception as e:
         try:
             if os.path.exists(tmp_path): os.remove(tmp_path)
         except OSError: pass
         print(f"SynapsePro1 ERROR: Save settings: {e}")
+        return False
 
 def _sync_toolbar_review_class(new_state: str):
     """Toggle the 'reviewing' class on the persistent toolbar webviews.

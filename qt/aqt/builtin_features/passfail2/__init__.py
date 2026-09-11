@@ -147,6 +147,15 @@ def mode_selector(mw: Any) -> QComboBox:
     sync()
     selector.currentIndexChanged.connect(save)
     control.changed.connect(sync)
+
+    def disconnect() -> None:
+        try:
+            control.changed.disconnect(sync)
+        except (TypeError, RuntimeError):
+            # The controller may already be destroyed when the main window closes.
+            pass
+
+    selector.destroyed.connect(disconnect)
     return selector
 
 

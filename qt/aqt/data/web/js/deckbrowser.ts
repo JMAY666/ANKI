@@ -3,6 +3,37 @@
 
 $(init);
 
+let filterDeckDirectory: (() => void) | undefined;
+
+function _setDeckCollapsed(id: string, collapsed: boolean): void {
+    const row = document.getElementById(id);
+    if (!row) { return; }
+    row.dataset.collapsed = collapsed ? "1" : "0";
+    const control = row.querySelector("a.collapse");
+    if (control) {
+        control.textContent = collapsed ? "+" : "−";
+        control.setAttribute("aria-expanded", String(!collapsed));
+    }
+    filterDeckDirectory?.();
+}
+
+function _updateDeckSelection(html: string): void {
+    const next = new DOMParser().parseFromString(html, "text/html");
+    const workspace = document.querySelector<HTMLElement>(".deck-workspace");
+    const incoming = next.querySelector<HTMLElement>(".deck-workspace");
+    if (!workspace || !incoming) { return; }
+    for (const selector of [".deck-selected-path", ".deck-main", ".deck-scope-info"]) {
+        const replacement = next.querySelector(selector);
+        if (replacement) { document.querySelector(selector)?.replaceWith(replacement); }
+    }
+    Object.assign(workspace.dataset, incoming.dataset);
+    document.querySelectorAll<HTMLElement>("tr.deck").forEach((row) => {
+        const selected = row.id === incoming.dataset.selectedDeck;
+        row.classList.toggle("current", selected);
+        row.querySelector("a.deck")?.setAttribute("aria-current", String(selected));
+    });
+}
+
 function init() {
     setupDeckWorkspace();
     $("tr.deck").draggable({
@@ -10,8 +41,10 @@ function init() {
 
         // can't use "helper: 'clone'" because of a bug in jQuery 1.5
         helper: function(_event) {
-            return $(this).clone(false);
+            // A cloned table row loses its column sizing outside its table.
+            return $("<div class='deck-drag-helper'></div>").text($(this).attr("data-path") || "");
         },
+        appendTo: "body",
         delay: 200,
         opacity: 0.7,
     });
@@ -76,6 +109,7 @@ function setupDeckWorkspace() {
         document.querySelector<HTMLElement>("#deck-no-match")!.hidden = rows.some((row) => !row.hidden);
     }
     filter();
+    filterDeckDirectory = filter;
     scroll.scrollTop = previous.scroll || 0;
     if (!search.value) {
         document.querySelector<HTMLElement>("tr.current:not([hidden])")?.scrollIntoView({ block: "nearest" });

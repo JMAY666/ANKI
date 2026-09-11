@@ -203,6 +203,13 @@ class SidebarWidget(QWidget):
             constants.GAME_ICON_FILENAME: ("gamification_sidebar_enabled", getattr(study_plan_trigger, 'trigger_gamification_sidebar_action', None), "GamificationSidebar"),
             constants.STUDY_PLAN_ICON_FILENAME: ("study_plan_widget_enabled", getattr(study_plan_trigger, 'trigger_study_plan_action', None), None),
         }
+
+        from .quick_switches import open_quick_switches
+        self._quick_button = self.create_icon_button("quick_switches.svg", "快捷开关")
+        if self._quick_button:
+            self._quick_button.installEventFilter(self)
+            self._quick_button.clicked.connect(lambda: open_quick_switches(mw, self._quick_button))
+            main_layout.addWidget(self._quick_button)
         
         top_icon_definitions = [
             (constants.AI_TOOL_ICON_FILENAME, _("Show/Hide AI Assistant")),

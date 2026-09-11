@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import html
+import json
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, cast
@@ -153,14 +154,21 @@ class DeckBrowser:
     def set_current_deck(self, deck_id: DeckId) -> None:
         self._selection_revision += 1
         revision = self._selection_revision
-        set_current_deck(parent=self.mw, deck_id=deck_id).success(
-            lambda _: (
-                self.refresh()
-                if revision == self._selection_revision
-                and self.mw.state == "deckBrowser"
-                else None
-            )
-        ).run_in_background(initiator=self)
+        self._render_revision += 1  # Reject renders requested before this selection.
+
+        def select() -> None:
+            if revision != self._selection_revision or self.mw.state != "deckBrowser":
+                return
+            set_current_deck(parent=self.mw, deck_id=deck_id).success(
+                lambda _: (
+                    self._renderPage(selection_only=True)
+                    if revision == self._selection_revision
+                    and self.mw.state == "deckBrowser"
+                    else None
+                )
+            ).run_in_background(initiator=self)
+
+        QTimer.singleShot(40, select)
 
     def start_review(self, deck_id: DeckId) -> None:
         if self._starting_review or self.mw.state == "review":
@@ -222,7 +230,7 @@ class DeckBrowser:
 </center>
 """
 
-    def _renderPage(self, reuse: bool = False) -> None:
+    def _renderPage(self, reuse: bool = False, selection_only: bool = False) -> None:
         if not reuse:
             self._render_revision += 1
             revision = self._render_revision
@@ -243,7 +251,15 @@ class DeckBrowser:
                     or output.current_deck_id != self.mw.col.decks.selected()
                 ):
                     return
+                previous = getattr(self, "_render_data", None)
                 self._render_data = output
+                if selection_only and previous and previous.tree == output.tree:
+                    # Keep the directory, focus, drag handlers and account widgets alive.
+                    from aqt.builtin_features.learning.deck_page import render_page
+
+                    page = render_page(self, DeckBrowserContent(tree="", stats=""))
+                    self.web.eval(f"_updateDeckSelection({json.dumps(page)});")
+                    return
                 self.__renderPage(None)
 
             QueryOp(
@@ -423,16 +439,31 @@ class DeckBrowser:
         display_options_for_deck_id(did)
 
     def _collapse(self, did: DeckId) -> None:
+        def failed(exc: Exception) -> None:
+            self.refresh()
+            showInfo(str(exc), parent=self.mw)
+
         node = self.mw.col.decks.find_deck_in_tree(self._render_data.tree, did)
         if node:
+            self._render_revision += 1
+            revision = self._render_revision
             node.collapsed = not node.collapsed
+
+            def saved(_: Any) -> None:
+                # A collapse can invalidate an in-flight deck selection render.
+                # Reconcile the final saved state without rebuilding the directory.
+                if revision == self._render_revision and self.mw.state == "deckBrowser":
+                    self._renderPage(selection_only=True)
+
             set_deck_collapsed(
                 parent=self.mw,
                 deck_id=did,
                 collapsed=node.collapsed,
                 scope=DeckCollapseScope.REVIEWER,
-            ).run_in_background(initiator=self)
-            self._renderPage(reuse=True)
+            ).success(saved).failure(failed).run_in_background(initiator=self)
+            self.web.eval(
+                f"_setDeckCollapsed('{int(did)}', {json.dumps(node.collapsed)});"
+            )
 
     def _handle_drag_and_drop(self, source: DeckId, target: DeckId) -> None:
         reparent_decks(

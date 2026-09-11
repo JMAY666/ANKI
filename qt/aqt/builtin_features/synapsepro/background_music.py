@@ -501,7 +501,7 @@ class AddTrackDialog(QDialog):
 class MiniMusicPlayer(QDialog):
     SIZE_LOCAL = (316, 636)
     SIZE_SC    = (340, 620)
-    SC_CHROME_H = 258   # height of the web UI (chrome) while in SoundCloud mode
+    SC_CHROME_H = 290   # includes the playlist loop control
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -847,6 +847,7 @@ class MiniMusicPlayer(QDialog):
         }
 
     def _send_init(self):
+        from .quick_switches import playlist_loop
         payload = {
             "isDark": self._is_night(),
             "colors": self._theme_colors(),
@@ -881,6 +882,7 @@ class MiniMusicPlayer(QDialog):
                 "mode": self._mode,
             },
             "sc": {
+                "loop": playlist_loop(),
                 "enabled": self.sc_view is not None,
                 "stations": [{"label": _(l), "url": u} for l, u in SC_STATIONS],
                 "customStations": self._custom_sc_station_payload(),
@@ -928,6 +930,14 @@ class MiniMusicPlayer(QDialog):
             self._sc_vol = int(data.get("v", 50))
             self._sc_js(f"scVolume({self._sc_vol});")
             self._save_soon()
+        elif a == "scLoop":
+            from .quick_switches import save_setting
+            try:
+                save_setting("soundcloud_playlist_loop", bool(data.get("on")))
+            except OSError as exc:
+                if tooltip:
+                    tooltip(str(exc))
+                self._send_init()
         elif a == "scStation":
             self._set_sc_url(data.get("url") or "")
         elif a == "scCustom":
@@ -1175,6 +1185,8 @@ class MiniMusicPlayer(QDialog):
         """Single source of truth for SC state (fed by bridge events + polling)."""
         # One-time bootstrap once the widget reports READY.
         if st.get("ready") and not self._sc_boot_done:
+            from .quick_switches import playlist_loop
+            self._sc_js(f"scSetLoop({str(playlist_loop()).lower()});")
             self._sc_boot_done = True
             self._sc_js(f"scVolume({self._sc_vol});")
             if self._sc_url and self._sc_url != DEFAULT_SC_URL:

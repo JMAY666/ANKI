@@ -206,7 +206,13 @@ export async function _updateQA(
     await _runHook(onShownHook);
 }
 
-export function _showQuestion(q: string, a: string, bodyclass: string): void {
+function notifyVisible(token?: number): void {
+    if (token === undefined) { return; }
+    // The first frame commits the newly visible DOM; only acknowledge after paint.
+    requestAnimationFrame(() => requestAnimationFrame(() => bridgeCommand(`reviewVisible:${token}`)));
+}
+
+export function _showQuestion(q: string, a: string, bodyclass: string, token?: number): void {
     reviewSide = "question";
     _queueAction(() =>
         _updateQA(
@@ -220,6 +226,7 @@ export function _showQuestion(q: string, a: string, bodyclass: string): void {
             },
             function() {
                 // focus typing area if visible
+                notifyVisible(token);
                 typeans = document.getElementById("typeans") as HTMLInputElement;
                 if (typeans) {
                     typeans.focus();
@@ -239,7 +246,7 @@ function scrollToAnswer(): void {
     bridgeCommand("repaintNeeded");
 }
 
-export function _showAnswer(a: string, bodyclass: string): void {
+export function _showAnswer(a: string, bodyclass: string, token?: number): void {
     reviewSide = "answer";
     _queueAction(() =>
         _updateQA(
@@ -255,7 +262,7 @@ export function _showAnswer(a: string, bodyclass: string): void {
                 allImagesLoaded().then(scrollToAnswer);
             },
             function() {
-                /* noop */
+                notifyVisible(token);
             },
         )
     );

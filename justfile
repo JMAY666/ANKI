@@ -6,6 +6,25 @@ mod release
 default:
     @just --list
 
+experience-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix scripts/experience_soundcloud.py
+    & "out/pyenv/Scripts/ruff.exe" format scripts/experience_soundcloud.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/passfail2/__init__.py
+    & "out/pyenv/Scripts/ruff.exe" format --no-force-exclude qt/aqt/builtin_features/synapsepro/quick_switches.py
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/reviewer.py qt/aqt/deckbrowser.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/builtin_features/synapsepro/quick_switches.py qt/tests/test_experience.py scripts/experience_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/reviewer.py qt/aqt/deckbrowser.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/builtin_features/synapsepro/quick_switches.py qt/tests/test_experience.py scripts/experience_smoke.py
+    & "node_modules/.bin/dprint.cmd" fmt ts/reviewer/index.ts qt/aqt/data/web/js/deckbrowser.ts scripts/soundcloud_test.cjs
+
+experience-test:
+    $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_experience.py qt/tests/test_review_shortcuts.py qt/tests/test_review_layout.py
+    node scripts/soundcloud_test.cjs
+
+experience-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/experience_smoke.py {{run_name}} {{mode}}
+
+experience-soundcloud run_name:
+    & "out/pyenv/Scripts/python.exe" scripts/experience_soundcloud.py {{run_name}}
+
 # Built-in features run inside this source tree's Anki, without ANKIDEV.
 builtin-run *args: build
     & "out/pyenv/Scripts/python.exe" scripts/run_builtin.py {{args}}

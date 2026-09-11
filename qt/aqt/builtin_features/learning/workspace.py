@@ -297,6 +297,11 @@ class LearningWorkspace(QWidget):
         self.pages.addWidget(graph_page)
 
     def _register(self) -> None:
+        from ..synapsepro.quick_switches import open_quick_switches
+
+        quick = QAction("快捷开关（恢复复习工具栏）…", self.mw)
+        quick.triggered.connect(lambda: open_quick_switches(self.mw))
+        self.mw.form.menuTools.addAction(quick)
         gui_hooks.profile_did_open.append(self.profile_open)
         gui_hooks.profile_will_close.append(self.profile_close)
         gui_hooks.state_did_change.append(self.state_changed)
@@ -349,6 +354,11 @@ class LearningWorkspace(QWidget):
         ).failure(self.error).run_in_background()
 
     def profile_close(self) -> None:
+        menu = getattr(self.mw, "_quick_switch_menu", None)
+        if menu:
+            menu.close()
+            menu.deleteLater()
+            self.mw._quick_switch_menu = None
         self.end_session()
         self.generation += 1
         self.store = None
@@ -458,10 +468,27 @@ class LearningWorkspace(QWidget):
             return
         self.header.hide()
         self.native.viewport.set_reviewing(True)
-        self.review_bar.show()
+        self.review_bar.setVisible(self.review_toolbar_visible())
         self.review_label.setText("复习 · " + self.mw.col.decks.current()["name"])
         self.pages.setCurrentWidget(self.native)
         self.review_visibility(True)
+
+    def review_toolbar_visible(self) -> bool:
+        return bool(self.mw.pm.profile.get("synapse_review_toolbar_visible", True))
+
+    def set_review_toolbar_visible(self, visible: bool) -> None:
+        previous = self.review_toolbar_visible()
+        self.mw.pm.profile["synapse_review_toolbar_visible"] = bool(visible)
+        try:
+            self.mw.pm.save()
+        except Exception:
+            self.mw.pm.profile["synapse_review_toolbar_visible"] = previous
+            raise
+        self.review_bar.setVisible(
+            visible
+            and self.mw.state == "review"
+            and self.pages.currentWidget() is self.native
+        )
 
     def review_visibility(self, visible: bool) -> None:
         if self.mw.state != "review":

@@ -191,6 +191,7 @@ body:has(.deck-workspace) {
 }
 
 .deck-directory { position: sticky; top: 16px; padding: 16px 10px; }
+.deck-drag-helper { max-width: 300px; padding: 10px; background: var(--canvas); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; overflow-wrap: anywhere; z-index: 1000; pointer-events: none; }
 #deck-search { width: 100%; min-width: 0; padding: 9px; margin: 0 0 10px; }
 .deck-tree-scroll { overflow: auto; max-height: calc(100vh - 245px); min-height: 130px; }
 .deck-workspace table.deck-tree {
