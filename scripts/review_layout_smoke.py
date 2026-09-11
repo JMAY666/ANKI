@@ -437,6 +437,223 @@ def verify_layout():
     )
 
 
+def verify_page_lifecycle():
+    diagnosing = mode == "pages-diagnose"
+
+    def report(label, value):
+        if diagnosing:
+            results["checks"][label] = bool(value)
+            print("CHECK", label, bool(value), flush=True)
+        else:
+            check(label, value)
+
+    def inactive(label, home=False):
+        settle()
+        report(
+            label + " has no visible or clickable footer", not mw.bottomWeb.isVisible()
+        )
+        if home:
+            report(
+                label + " returns all footer space to the page",
+                w.native.viewport.height() == w.native.height(),
+            )
+            report(
+                label + " clears review buttons from the old document",
+                js(
+                    mw.bottomWeb,
+                    "document.querySelectorAll('#ansbut,button[data-ease]').length",
+                )
+                == 0,
+            )
+
+    def resize_pages(label, home=False):
+        for width, height in ((1000, 720), (640, 480)):
+            mw.resize(width, height)
+            inactive(f"{label} {width}x{height}", home)
+        mw.showMaximized()
+        inactive(label + " maximized", home)
+        mw.showNormal()
+        mw.activateWindow()
+        settle()
+        mw.on_toggle_full_screen()
+        inactive(label + " fullscreen", home)
+        mw.on_toggle_full_screen()
+        inactive(label + " restored", home)
+        measure(label)
+
+    def change_resolution(label):
+        if mode != "pages-resolution":
+            return
+        import win32api
+        import win32con
+
+        device = None
+        for index in range(16):
+            try:
+                candidate_device = win32api.EnumDisplayDevices(None, index)
+            except win32api.error:
+                break
+            if candidate_device.StateFlags & win32con.DISPLAY_DEVICE_PRIMARY_DEVICE:
+                device = candidate_device.DeviceName
+                break
+        assert device, "No primary display"
+        original = win32api.EnumDisplaySettings(device, win32con.ENUM_CURRENT_SETTINGS)
+        target = None
+        index = 0
+        while True:
+            try:
+                candidate = win32api.EnumDisplaySettings(device, index)
+            except win32api.error:
+                break
+            index += 1
+            if (
+                (candidate.PelsWidth, candidate.PelsHeight) == (1600, 900)
+                and candidate.BitsPerPel == original.BitsPerPel
+                and candidate.DisplayFrequency == original.DisplayFrequency
+            ):
+                target = candidate
+                break
+        assert target and (original.PelsWidth, original.PelsHeight) != (1600, 900)
+        assert (
+            win32api.ChangeDisplaySettingsEx(device, target, win32con.CDS_TEST)
+            == win32con.DISP_CHANGE_SUCCESSFUL
+        )
+        # A separate process restores the exact original mode on EOF, request,
+        # or a 15-second timeout, even if the Qt test process fails.
+        restore_code = """
+import os,sys,threading,win32api,win32con
+device=sys.argv[1]
+original=win32api.EnumDisplaySettings(device,win32con.ENUM_CURRENT_SETTINGS)
+def restore():
+    result=win32api.ChangeDisplaySettingsEx(device,original,0)
+    os._exit(0 if result==win32con.DISP_CHANGE_SUCCESSFUL else 1)
+timer=threading.Timer(15,restore)
+timer.start()
+print('ready',flush=True)
+sys.stdin.readline()
+restore()
+"""
+        guard_process = subprocess.Popen(
+            [sys.executable, "-c", restore_code, device],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        assert guard_process.stdout.readline().strip() == "ready"
+        try:
+            check(
+                label + " accepts a temporary resolution change",
+                win32api.ChangeDisplaySettingsEx(device, target, 0)
+                == win32con.DISP_CHANGE_SUCCESSFUL,
+            )
+            inactive(label + " at 1600x900", True)
+            current = win32api.EnumDisplaySettings(
+                device, win32con.ENUM_CURRENT_SETTINGS
+            )
+            check(
+                label + " actually changed the display resolution",
+                (current.PelsWidth, current.PelsHeight) == (1600, 900),
+            )
+            results.setdefault("display_modes", []).append(
+                {
+                    "before": [
+                        original.PelsWidth,
+                        original.PelsHeight,
+                        original.DisplayFrequency,
+                    ],
+                    "during": [
+                        current.PelsWidth,
+                        current.PelsHeight,
+                        current.DisplayFrequency,
+                    ],
+                }
+            )
+        finally:
+            win32api.ChangeDisplaySettingsEx(device, original, 0)
+            guard_process.communicate("restore\n", timeout=6)
+            assert guard_process.returncode == 0, "Display restore watchdog failed"
+        restored = win32api.EnumDisplaySettings(device, win32con.ENUM_CURRENT_SETTINGS)
+        check(
+            label + " restores the exact original display mode",
+            (restored.PelsWidth, restored.PelsHeight, restored.DisplayFrequency)
+            == (original.PelsWidth, original.PelsHeight, original.DisplayFrequency),
+        )
+        inactive(label + " after resolution restoration", True)
+
+    inactive("fresh home", True)
+    resize_pages("fresh home", True)
+    change_resolution("fresh home resolution")
+    js(mw.web, "document.querySelector('.deck-study-card').click()")
+    wait(
+        lambda: (
+            mw.reviewer.state == "question"
+            and js(mw.bottomWeb, "!!document.getElementById('ansbut')")
+            and js(mw.web, "!!document.querySelector('#qa iframe, #qa h2')")
+        )
+    )
+    settle()
+    report("review shows the question controls", mw.bottomWeb.isVisible())
+    cid = mw.reviewer.card.id
+    w.open(0)
+    inactive("statistics while review is paused")
+    resize_pages("statistics while review is paused")
+    w.show_review()
+    settle()
+    report(
+        "resuming review keeps the card and question",
+        mw.bottomWeb.isVisible()
+        and mw.reviewer.card.id == cid
+        and mw.reviewer.state == "question",
+    )
+    click_web(mw.bottomWeb, "#ansbut")
+    wait(lambda: mw.reviewer.state == "answer" and len(buttons()) == 4)
+    report("answer controls remain usable", mw.bottomWeb.isVisible())
+    w.finish_button.click()
+    wait(
+        lambda: (
+            mw.state == "deckBrowser"
+            and js(mw.web, "!!document.querySelector('.deck-workspace')")
+        )
+    )
+    inactive("home after review", True)
+    resize_pages("home after review", True)
+    change_resolution("home after review resolution")
+    w.open(0)
+    inactive("statistics from home")
+    resize_pages("statistics from home")
+    mw.moveToState("deckBrowser")
+    wait(lambda: js(mw.web, "!!document.querySelector('.deck-study-card')"))
+    settle()
+    js(mw.web, "document.querySelector('.deck-study-card').click()")
+    wait(
+        lambda: (
+            mw.reviewer.state == "question"
+            and js(mw.bottomWeb, "!!document.getElementById('ansbut')")
+        )
+    )
+    settle()
+    report("reentering review restores show answer", mw.bottomWeb.isVisible())
+    QTest.keyClick(mw, Qt.Key.Key_Space)
+    wait(lambda: mw.reviewer.state == "answer" and len(buttons()) == 4)
+    count = mw.col.db.scalar("SELECT COUNT(*) FROM revlog")
+    QTest.keyClick(mw, Qt.Key.Key_4)
+    wait(
+        lambda: (
+            mw.col.db.scalar("SELECT COUNT(*) FROM revlog") == count + 1
+            and mw.reviewer.state == "question"
+        )
+    )
+    report(
+        "answer and rating shortcuts work after page changes",
+        mw.col.db.scalar("SELECT ease FROM revlog ORDER BY id DESC LIMIT 1") == 4,
+    )
+    if diagnosing:
+        assert all(results["checks"].values()), (
+            "Reproduced inactive-page review controls or footer space"
+        )
+
+
 if mode == "executable":
     assert (BASE / ".builtin-test").read_text() == "synthetic data only"
     assert package, "Set ANKI_BUILTIN_PACKAGE_ROOT to the packaged application"
@@ -531,27 +748,33 @@ try:
         )
     )
     settle()
-    js(mw.web, "document.querySelector('.deck-study-card').click()")
-    wait(
-        lambda: (
-            mw.reviewer.state == "question"
-            and js(mw.bottomWeb, "!!document.getElementById('ansbut')")
-            and js(mw.web, "!!document.querySelector('#qa iframe, #qa h2')")
-        )
-    )
-    measure("window-question")
-    if mode == "diagnose":
-        mw.activateWindow()
-        mw.on_toggle_full_screen()
-        measure("fullscreen-question")
-        mw.reviewer._showAnswer()
-        wait(lambda: len(buttons()) == 4)
-        measure("fullscreen-answer")
-        mw.on_toggle_full_screen()
-        measure("window-answer")
-        check("review front and answer remain available", mw.reviewer.state == "answer")
+    if mode in ("pages", "pages-diagnose", "pages-resolution"):
+        verify_page_lifecycle()
     else:
-        verify_layout()
+        js(mw.web, "document.querySelector('.deck-study-card').click()")
+        wait(
+            lambda: (
+                mw.reviewer.state == "question"
+                and js(mw.bottomWeb, "!!document.getElementById('ansbut')")
+                and js(mw.web, "!!document.querySelector('#qa iframe, #qa h2')")
+            )
+        )
+        measure("window-question")
+        if mode == "diagnose":
+            mw.activateWindow()
+            mw.on_toggle_full_screen()
+            measure("fullscreen-question")
+            mw.reviewer._showAnswer()
+            wait(lambda: len(buttons()) == 4)
+            measure("fullscreen-answer")
+            mw.on_toggle_full_screen()
+            measure("window-answer")
+            check(
+                "review front and answer remain available",
+                mw.reviewer.state == "answer",
+            )
+        else:
+            verify_layout()
     w.profile_close()
     mw.pm.save()
     mw.col.close()

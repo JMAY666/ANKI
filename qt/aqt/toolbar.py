@@ -197,14 +197,75 @@ class TopWebView(ToolbarWebView):
 
 class BottomWebView(ToolbarWebView):
     def __init__(self, mw: aqt.AnkiQt) -> None:
+        self._content_state: str | None = None
+        self._page_epoch = 0
+        self._review_page_visible = True
         super().__init__(mw, kind=AnkiWebViewKind.BOTTOM_TOOLBAR)
         qconnect(self.hide_timer.timeout, self.hide_if_allowed)
+        gui_hooks.state_will_change.append(self._state_will_change)
+
+    def set_bridge_command(self, func: Callable[[str], Any], context: Any) -> None:
+        self._page_epoch += 1
+        self._content_state = self.mw.state if context is not None else None
+        super().set_bridge_command(func, context)
+
+    def _can_display(self) -> bool:
+        return (
+            self._content_state is not None
+            and self._content_state == self.mw.state
+            and (self.mw.state != "review" or self._review_page_visible)
+        )
+
+    def review_controls_active(self) -> bool:
+        # Auto-hidden review controls still accept the normal review shortcuts.
+        return self.mw.state == "review" and self._can_display()
+
+    def _hide_page(self) -> None:
+        if animation := getattr(self, "animation", None):
+            animation.stop()
+        # Toolbar hide() normally only animates its height. Inactive pages must
+        # actually remove the WebView from layout and input handling instead.
+        QWidget.hide(self)
+
+    def _state_will_change(self, new: str, old: str) -> None:
+        self._page_epoch += 1
+        if new != self._content_state:
+            self._hide_page()
+
+    def set_review_page_visible(self, visible: bool) -> None:
+        if self._review_page_visible == visible:
+            return
+        self._review_page_visible = visible
+        self._page_epoch += 1
+        if visible:
+            self.show()
+        else:
+            self._hide_page()
+
+    def clear(self) -> None:
+        """Discard a previous page's buttons and bridge when this page has no bar."""
+        self.hide_timer.stop()
+        self.set_bridge_command(lambda _command: None, None)
+        self.hidden = True
+        self.setHtml("")
+        self._hide_page()
+
+    def adjustHeightToFit(self) -> None:
+        if self.hidden or not self._can_display():
+            return
+        epoch = self._page_epoch
+
+        def measured(height: int | None) -> None:
+            if epoch == self._page_epoch:
+                self._onHeight(height)
+
+        self.evalWithCallback("document.documentElement.offsetHeight", measured)
 
     def _onHeight(self, qvar: int | None) -> None:
-        if qvar is None:
+        if qvar is None or not self._can_display():
             return
         self.web_height = int(qvar)
-        if self.mw.state == "review" and self.hidden:
+        if self.hidden:
             return
         if animation := getattr(self, "animation", None):
             animation.stop()
@@ -232,6 +293,11 @@ class BottomWebView(ToolbarWebView):
             self.show()
 
     def animate_height(self, height: int) -> None:
+        if not self._can_display():
+            self._hide_page()
+            return
+        if animation := getattr(self, "animation", None):
+            animation.stop()
         self.web_height = height
 
         if self.mw.pm.reduce_motion() or height == self.height():
@@ -245,8 +311,15 @@ class BottomWebView(ToolbarWebView):
             self.animation.setDuration(int(theme_manager.var(props.TRANSITION)))
             self.animation.setStartValue(self.height())
             self.animation.setEndValue(height)
-            qconnect(self.animation.finished, lambda: self.setFixedHeight(height))
+            epoch = self._page_epoch
+            qconnect(
+                self.animation.finished, lambda: self._finish_height(height, epoch)
+            )
             self.animation.start()
+
+    def _finish_height(self, height: int, epoch: int) -> None:
+        if epoch == self._page_epoch and self._can_display():
+            self.setFixedHeight(height)
 
     def hide_if_allowed(self) -> None:
         if self.mw.state != "review":
@@ -263,20 +336,29 @@ class BottomWebView(ToolbarWebView):
             self.hide()
 
     def hide(self) -> None:
+        self._page_epoch += 1
         super().hide()
 
-        self.hidden = True
-        self.animate_height(1)
+        if self.mw.state == "review" and self._can_display():
+            self.animate_height(1)
+        else:
+            self._hide_page()
 
     def show(self) -> None:
+        if not self._can_display():
+            self._hide_page()
+            return
+        self._page_epoch += 1
         super().show()
+        QWidget.show(self)
 
-        self.hidden = False
         if self.mw.state == "review":
+            epoch = self._page_epoch
+
             # delay to account for reflow
             def cb(height: int | None):
                 # "When QWebEnginePage is deleted, the callback is triggered with an invalid value"
-                if height is not None:
+                if height is not None and epoch == self._page_epoch and not self.hidden:
                     self.animate_height(height)
 
             self.mw.progress.single_shot(

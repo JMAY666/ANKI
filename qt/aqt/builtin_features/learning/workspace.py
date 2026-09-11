@@ -458,6 +458,7 @@ class LearningWorkspace(QWidget):
     def review_visibility(self, visible: bool) -> None:
         if self.mw.state != "review":
             return
+        self.mw.bottomWeb.set_review_page_visible(visible)
         if visible:
             # Reviewer.show() already installs these on entry. Reinstall only
             # after our temporary navigation cleared them, or Qt sees duplicate

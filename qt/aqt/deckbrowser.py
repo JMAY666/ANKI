@@ -454,7 +454,7 @@ class DeckBrowser:
 
     def _drawButtons(self) -> None:
         if not self.drawLinks:
-            self.mw.bottomWeb.hide()
+            self.mw.bottomWeb.clear()
             return
         buf = ""
         drawLinks = deepcopy(self.drawLinks)

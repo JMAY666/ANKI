@@ -672,6 +672,10 @@ class Reviewer:
             self._answerCard(self._defaultEase())
 
     def _linkHandler(self, url: str) -> None:
+        if (
+            url in ("ans", "edit", "more") or url.startswith(("ease", "play:"))
+        ) and not self.mw.bottomWeb.review_controls_active():
+            return
         if url == "ans":
             self._getTypedAnswer()
         elif url.startswith("ease"):
