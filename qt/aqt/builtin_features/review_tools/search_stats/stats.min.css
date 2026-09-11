@@ -1,0 +1,406 @@
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/GraphCategory.esbuild-svelte-fake-css */
+label.svelte-x5luxh {
+  display: contents;
+}
+div.separator.svelte-x5luxh {
+  display: flex;
+  align-items: center;
+  opacity: 0.5;
+}
+div.svelte-x5luxh button:where(.svelte-x5luxh),
+div.svelte-x5luxh button:where(.svelte-x5luxh):hover {
+  font-weight: 900;
+  font-size: xx-large;
+  background: none;
+  border: none;
+  border-radius: none;
+  transform: rotate(90deg);
+  transition: transform 0.5s ease-in-out;
+}
+div.hidden.svelte-x5luxh button:where(.svelte-x5luxh) {
+  transform: rotate(0deg);
+}
+button.svelte-x5luxh,
+hr.svelte-x5luxh,
+h3.svelte-x5luxh {
+  margin: 1rem 0.5rem;
+}
+hr.svelte-x5luxh {
+  flex-grow: 1;
+  opacity: 1;
+}
+div.category.svelte-x5luxh {
+  display: grid;
+  gap: 1em;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: calc(100vw - 3em);
+  margin-left: 1em;
+  margin-right: 1em;
+}
+@media only screen and (max-width: 600px) {
+  div.category.svelte-x5luxh {
+    width: calc(100vw - 1rem);
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+}
+@media only screen and (max-width: 1400px) {
+  div.category.svelte-x5luxh {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media only screen and (max-width: 1200px) {
+  div.category.svelte-x5luxh {
+    grid-template-columns: 1fr;
+  }
+}
+@media only screen and (max-width: 600px) {
+  div.category.svelte-x5luxh {
+    font-size: 12px;
+  }
+}
+@media only print {
+  div.category.svelte-x5luxh {
+    display: block;
+    margin-top: 3em;
+  }
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/GraphContainer.esbuild-svelte-fake-css */
+.graph.svelte-fnzxjg:focus {
+  outline: 0;
+}
+.container.svelte-fnzxjg {
+  width: 100%;
+  background: var(--canvas-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--border-radius-medium, 10px);
+  transition: box-shadow var(--transition) ease-in-out;
+  page-break-inside: avoid;
+  padding: 1em;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  overflow: hidden;
+}
+.graph.svelte-fnzxjg p {
+  font-size: small;
+  margin-top: 1em;
+}
+.graph.svelte-fnzxjg h1 {
+  border-bottom: 1px var(--border) solid;
+  padding-bottom: 0.25em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/LinkButton.esbuild-svelte-fake-css */
+.btn.svelte-nz52op {
+  margin: 0.25em;
+  background-color: #0d6efd;
+}
+.btn.svelte-nz52op:hover {
+  background-color: #0b5ed7;
+  color: var(--bs-button-color);
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/NoGraph.esbuild-svelte-fake-css */
+div.svelte-1mfx4qw {
+  width: min(var(--graph-width), 100%);
+  height: var(--graph-height);
+  opacity: 0.5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Calculator.esbuild-svelte-fake-css */
+.big.svelte-1c4hk55 {
+  width: 100%;
+  height: 100%;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Bar.esbuild-svelte-fake-css */
+div.glossary.svelte-plohjk {
+  display: flex;
+  gap: 1em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/BarScrollable.esbuild-svelte-fake-css */
+div.options.svelte-ixhl0h {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  grid-template-areas: "a a b b";
+  gap: 0.5em;
+  align-items: baseline;
+}
+label.svelte-ixhl0h {
+  display: contents;
+}
+input.svelte-ixhl0h {
+  min-width: 5em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Pie.esbuild-svelte-fake-css */
+div.root.svelte-1rfeekb {
+  margin: 1em 0;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-items: center;
+  gap: 1em;
+  justify-content: space-around;
+}
+div.grid.svelte-1rfeekb {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 0 1em;
+}
+span.colour.svelte-1rfeekb {
+  margin-right: -1em;
+}
+div.glossary.svelte-1rfeekb {
+  overflow-y: auto;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/OldRetentionPie.esbuild-svelte-fake-css */
+label.svelte-xy6f44 {
+  display: contents;
+}
+small.svelte-xy6f44 {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25em;
+  max-height: 5em;
+  overflow-y: auto;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/CustomPie.esbuild-svelte-fake-css */
+div.searches.svelte-1s5c27i {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1em;
+}
+div.options.svelte-1s5c27i {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/CustomBar.esbuild-svelte-fake-css */
+div.searches.svelte-ny456h {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1em;
+}
+div.options.svelte-ny456h {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/ForgettingCurve.esbuild-svelte-fake-css */
+svg.svelte-yocx51 {
+  width: 100%;
+  height: 100%;
+}
+.control-grid.svelte-yocx51 {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0.5em 1em;
+  align-items: baseline;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+.range-container.svelte-yocx51 {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5em 1em;
+}
+.legend.svelte-yocx51 {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.legend-row.svelte-yocx51 {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.legend-colour.svelte-yocx51 {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 2px;
+  display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.axis-label {
+  fill: currentColor;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Warning.esbuild-svelte-fake-css */
+span.svelte-10c69m9 {
+  color: yellow;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Candlestick.esbuild-svelte-fake-css */
+div.options.svelte-9nwln6 {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  grid-template-areas: "a a b b";
+  gap: 0.5em;
+  align-items: baseline;
+}
+label.svelte-9nwln6 {
+  display: contents;
+}
+input.svelte-9nwln6 {
+  min-width: 5em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/GraphTypeSelector.esbuild-svelte-fake-css */
+div.svelte-1bdmzuk {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1em;
+  margin: 0.5em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/TimeMachineScroll.esbuild-svelte-fake-css */
+label.scroll.svelte-1t9trri {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5em 1em;
+  align-items: baseline;
+  width: 100%;
+}
+.scroll.svelte-1t9trri {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5em 1em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/categories/FSRSCategory.esbuild-svelte-fake-css */
+label.scroll.svelte-93wy90 {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/IntervalPie.esbuild-svelte-fake-css */
+div.options.svelte-bs0n9k {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5em 1em;
+  align-items: baseline;
+}
+div.totals.svelte-bs0n9k {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  justify-items: start;
+  gap: 0 1em;
+}
+span.svelte-bs0n9k {
+  text-align: center;
+}
+label.svelte-bs0n9k {
+  display: contents;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/IntervalGraph.esbuild-svelte-fake-css */
+label.checkbox.svelte-zywppq {
+  user-select: none;
+  display: block;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Heatmap.esbuild-svelte-fake-css */
+.bin.svelte-18z2ydh {
+  pointer-events: fill;
+}
+.bin.svelte-18z2ydh:focus {
+  outline: none;
+}
+.bin-highlight.svelte-18z2ydh {
+  pointer-events: none;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/SRHeatmap.esbuild-svelte-fake-css */
+.options.svelte-ozygt6 {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 0.5em;
+  align-items: baseline;
+  height: 4em;
+}
+.options.svelte-ozygt6 label:where(.svelte-ozygt6) {
+  display: contents;
+}
+input[type=number].svelte-ozygt6 {
+  min-width: 5em;
+}
+input[type=checkbox].svelte-ozygt6 {
+  justify-self: left;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/categories/TimeMachineCategory.esbuild-svelte-fake-css */
+div.options.svelte-179bkui {
+  display: flex;
+  justify-content: center;
+  gap: 0.5em;
+  align-items: baseline;
+}
+div.options.svelte-179bkui label:where(.svelte-179bkui) {
+  display: contents;
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/GraphOrder.esbuild-svelte-fake-css */
+.item.svelte-1hv80v5 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  padding: 0.25em;
+}
+.item.svelte-1hv80v5:hover {
+  background-color: var(--highlight-bg);
+}
+.list.svelte-1hv80v5 {
+  display: flex;
+  flex-direction: column;
+  padding: 0.25em;
+  background-color: var(--canvas-inset);
+}
+.removed.svelte-1hv80v5 {
+  color: var(--fg-disabled);
+}
+
+/* fakecss:/home/luc/Programming/python/anki/New Graphs/src/ts/Root.esbuild-svelte-fake-css */
+h1.header.svelte-1u21ub9 {
+  margin: 1.5rem;
+}
+div.tooltip.svelte-1u21ub9 {
+  position: absolute;
+  opacity: 0;
+  white-space: nowrap;
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 15px;
+  pointer-events: none;
+  transition: opacity var(--transition);
+  color: var(--fg);
+  background: var(--canvas-overlay);
+}
+.hover-bar {
+  fill: white;
+  opacity: 0;
+}
+.hover-bar:hover {
+  opacity: 0.1;
+}
+.qt5 div.svelte-1u21ub9 input {
+  color: black;
+}

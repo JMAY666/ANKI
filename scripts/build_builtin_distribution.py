@@ -47,6 +47,14 @@ required = [
     "aqt/builtin_features/learning/review_layout.py",
     "aqt/builtin_features/passfail2/__init__.py",
     "aqt/builtin_features/passfail2/LICENSE",
+    "aqt/builtin_features/review_tools/__init__.py",
+    "aqt/builtin_features/review_tools/SOURCE.md",
+    "aqt/builtin_features/review_tools/pace_graph/model.py",
+    "aqt/builtin_features/review_tools/search_stats/stats.min.js",
+    "aqt/builtin_features/review_tools/search_stats/locale/zh_CN.ftl",
+    "aqt/builtin_features/review_tools/search_stats/LICENSE",
+    "aqt/builtin_features/review_tools/advanced/LICENSE",
+    "aqt/builtin_features/review_tools/LICENSE-answer-feedback",
 ]
 for name in required:
     assert (packages / name).is_file(), name
@@ -61,6 +69,7 @@ manifest = {
     "passfail2": "0.3.0, AnkiWeb archive fb4c98a63d76384204b59cea75702939cc23b6e7f4eb6c73c307b2a810573c4f; native/two-grade mode switching",
     "learning_workspace": "2: three-column decks, direct native review, searchable statistics scope and confirmed daily DeepSeek suggestions",
     "review_layout": "1: persistent resizable card viewport, legacy iframe resizing and content-sized review controls",
+    "review_tools": "2026-09-11: Pace Graph, Button Colours, Search Stats Extended, Advanced Review Bottom Bar 3.6.1, Show Answer Button Pressed, Confident But Wrong; exact archive hashes in review_tools/SOURCE.md",
     "wheels": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in wheels},
     "runtime": "Existing Anki 26.8.1 Windows Python/Qt launcher and dependencies",
 }

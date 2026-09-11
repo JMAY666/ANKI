@@ -1,0 +1,7 @@
+{
+    "fast_factor": 0.6,
+    "lookback_days": 120,
+    "min_gap_hours": 12,
+    "max_rows": 60,
+    "preview_chars": 60
+}

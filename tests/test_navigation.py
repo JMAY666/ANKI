@@ -25,7 +25,7 @@ class PassFailTests(unittest.TestCase):
             reviewer = SimpleNamespace(_defaultEase=lambda: default)
             value = DEFAULTS | {"enabled": True}
             self.assertEqual(
-                answer_buttons((), reviewer, value), ((1, "Fail"), (default, "Pass"))
+                answer_buttons((), reviewer, value), ((1, "失败"), (default, "通过"))
             )
             self.assertEqual(remap_answer((True, 1), reviewer, value), (True, 1))
             for key in (2, 3, 4):
@@ -57,7 +57,7 @@ class PassFailTests(unittest.TestCase):
         self.assertIn("#123456", labels[0][1])
         self.assertEqual(
             answer_buttons((), reviewer, value | {"toggle_names_textcolors": "0"}),
-            ((1, "Fail"), (3, "Pass")),
+            ((1, "失败"), (3, "通过")),
         )
         self.assertEqual(value["again_button_name"], "<b>&失败")
         for invalid in (

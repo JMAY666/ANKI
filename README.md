@@ -17,6 +17,8 @@ Anki is a spaced repetition program. Please see the [website](https://apps.ankiw
 
 Pass/Fail 2 0.3.0 也已内置：复习栏可随时选择原生四档或 Fail／Pass 两档；工具 → 复习按钮提供原插件的名称、文字颜色开关、颜色选择与预览。新用户默认保留四档；旧插件配置和启用状态仅在首次读取时迁入，原件保留。版本来源与所有切换规则见 [Pass/Fail 2 集成说明](docs/PASSFAIL2-INTEGRATION.md)。
 
+另已在同一源码中接入 Pace Graph、Button Colours、Search Stats Extended、Advanced Review Bottom Bar 3.6.1、Show Answer Button Pressed 和 Confident But Wrong。工具 → 复习与统计扩展管理设置；扩展图表位于统计 → 详细统计。默认保留当前评分外观，评分提示关闭、跳过按钮隐藏；原生／Pass-Fail 评分语义保持不变。新增菜单、设置、提示与报告使用中文。各项入口、固定来源、用户确认的冲突处理、验证和回退见 [六项内置功能说明](docs/SIX-ADDON-INTEGRATION.md)。
+
 源码位于 `qt/aqt/builtin_features/`，由 Anki 初始化并管理配置；旧插件配置可迁入，重复加载会被拦截。三栏浏览同时提供 FSRS Target R，保留原生浏览与复习流程。
 
 构建、启动、迁移和恢复见 [内置功能说明](BUILTIN-FEATURES.md)，此前两项功能的合并与安装见 [早期交付记录](docs/BUILTIN-INTEGRATION-2026-09-11.md)。后续修改审核后统一推送 `main`。

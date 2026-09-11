@@ -12,7 +12,15 @@ lint.select = [
 # Imported tool implementations retain their reviewed source formatting and
 # have syntax, behavior, and real Qt integration checks in builtin-test/smoke.
 force-exclude = true
-extend-exclude = ["*_pb2.py", "*_pb2.pyi", "qt/aqt/builtin_features/synapsepro", "qt/aqt/builtin_features/fsrs_helper"]
+extend-exclude = [
+  "*_pb2.py",
+  "*_pb2.pyi",
+  "qt/aqt/builtin_features/synapsepro",
+  "qt/aqt/builtin_features/fsrs_helper",
+  "qt/aqt/builtin_features/review_tools/pace_graph",
+  "qt/aqt/builtin_features/review_tools/advanced",
+  "qt/aqt/builtin_features/review_tools/confidence.py",
+]
 
 lint.ignore = [
   # Docstring rules (missing-*-docstring in pylint)

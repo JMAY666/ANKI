@@ -15,6 +15,13 @@ LEGACY_IDS = {
     "759844606": "fsrs_helper",
     "876946123": "passfail2",
     "PassFail2": "passfail2",
+    "1323545382": "pace_graph",
+    "pace_graph": "pace_graph",
+    "2494384865": "button_colours",
+    "1613056169": "search_stats",
+    "1136455830": "advanced_review",
+    "2060144143": "answer_feedback",
+    "1659223841": "confident_wrong",
 }
 
 

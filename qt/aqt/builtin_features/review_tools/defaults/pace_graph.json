@@ -1,0 +1,13 @@
+{
+    "goal": 10.0,
+    "window": 20,
+    "refresh": 1,
+    "position": null,
+    "transition": 4.0,
+    "view": "minimal",
+    "background": 20,
+    "foreground": 65,
+    "graph_opacity": 55,
+    "theme": "auto",
+    "number_size": 20
+}

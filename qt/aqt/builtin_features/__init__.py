@@ -47,6 +47,9 @@ def initialize(mw: AnkiQt) -> None:
     from .passfail2 import install as install_passfail
 
     install_passfail(mw, _instance.storage)
+    from .review_tools import install as install_review_tools
+
+    install_review_tools(mw, _instance.storage)
     from .learning import install
 
     install(mw)

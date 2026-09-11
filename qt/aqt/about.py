@@ -70,7 +70,8 @@ def show(mw: aqt.AnkiQt) -> QDialog:
     abouttext += f"<p>{lede}"
     abouttext += f"<p>{tr.about_anki_is_licensed_under_the_agpl3()}"
     abouttext += f"<p>{tr.about_version(val=version_with_build())}<br>"
-    abouttext += "内置 SynapsePro 1.6.0-local（含 DeepSeek） · FSRS Helper 26.05.08 · Pass/Fail 2 0.3.0<br>"
+    abouttext += "内置 SynapsePro 1.6.0-local（含 DeepSeek） · FSRS 调度助手 26.05.08 · 两档评分 0.3.0<br>"
+    abouttext += "内置复习速度图 · 评分配色 · 搜索与扩展统计 · 高级复习栏 3.6.1 · 评分结果提示 · 快速作答后遗忘分析（2026-09-11 源码包）<br>"
     abouttext += ("Python %s Qt %s Chromium %s<br>") % (
         platform.python_version(),
         qVersion(),

@@ -1,0 +1,11 @@
+{
+    "language": "zh_CN",
+    "debug_always_show": false,
+    "hide_duration_ms": 1500,
+    "custom_labels": {
+        "1": "",
+        "2": "",
+        "3": "",
+        "4": ""
+    }
+}

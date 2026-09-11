@@ -13,6 +13,23 @@ builtin-run *args: build
 builtin-test:
     & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py
 
+review-tools-test:
+    & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py test_review_tools.py
+
+review-tools-locale-check:
+    node scripts/verify_review_locale.cjs
+
+review-tools-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/review_tools_smoke.py {{run_name}} {{mode}}
+
+review-tools-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/review_tools qt/aqt/builtin_features/__init__.py qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/reviewer.py scripts/review_tools_smoke.py tests/test_review_tools.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/review_tools qt/aqt/builtin_features/__init__.py qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/reviewer.py scripts/review_tools_smoke.py tests/test_review_tools.py
+
+review-tools-check:
+    & "out/pyenv/Scripts/ruff.exe" check qt/aqt/builtin_features/review_tools qt/aqt/builtin_features/__init__.py qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/reviewer.py scripts/review_tools_smoke.py tests/test_review_tools.py
+    & "out/pyenv/Scripts/mypy.exe" --follow-imports=silent qt/aqt/builtin_features/review_tools qt/aqt/builtin_features/learning/workspace.py qt/aqt/reviewer.py
+
 navigation-test:
     & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py test_navigation.py
 

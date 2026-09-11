@@ -33,6 +33,7 @@
         "addon/**",
         "qt/aqt/builtin_features/synapsepro/**",
         "qt/aqt/builtin_features/fsrs_helper/**",
+        "qt/aqt/builtin_features/review_tools/search_stats/stats.min.js",
         "original/**",
         "runtime/**",
         ".venv/**",

@@ -28,6 +28,8 @@ from aqt.qt import (
     pyqtSignal,
 )
 
+from ..review_tools.i18n import tr as tool_tr
+
 DEFAULTS = {
     "enabled": False,
     "toggle_names_textcolors": "0",
@@ -60,10 +62,10 @@ def validate(value: dict) -> None:
 def answer_buttons(buttons: tuple, reviewer: Any, value: dict) -> tuple:
     if not value["enabled"]:
         return buttons
-    labels = ["Fail", "Pass"]
+    labels = ["失败", "通过"]
     if value["toggle_names_textcolors"] == "1":
         labels = [
-            f'<span style="color:{html.escape(value[f"{prefix}_button_textcolor"], quote=True)}">{html.escape(value[f"{prefix}_button_name"])}</span>'
+            f'<span style="color:{html.escape(value[f"{prefix}_button_textcolor"], quote=True)}">{html.escape(tool_tr(value[f"{prefix}_button_name"]))}</span>'
             for prefix in ("again", "good")
         ]
     return ((1, labels[0]), (reviewer._defaultEase(), labels[1]))
@@ -86,7 +88,7 @@ class PassFailController(QObject):
         validate(self.value)
         gui_hooks.reviewer_will_init_answer_buttons.append(self.buttons)
         gui_hooks.reviewer_will_answer_card.append(self.answer)
-        action = QAction("复习按钮 · Pass/Fail 2…", mw)
+        action = QAction("复习按钮 · 两档评分…", mw)
         action.triggered.connect(lambda: SettingsDialog(self).exec())
         mw.form.menuTools.addAction(action)
 
@@ -119,9 +121,9 @@ def mode_selector(mw: Any) -> QComboBox:
     selector = QComboBox()
     selector.setAccessibleName("复习评分模式")
     selector.addItem("原生四档评分", False)
-    selector.addItem("Pass/Fail 两档评分", True)
+    selector.addItem("通过／失败两档评分", True)
     selector.setToolTip(
-        "两档模式：Fail=重来；Pass=原生默认评分。原评分键 2、3、4 均提交 Pass。"
+        "两档模式：失败=重来；通过=原生默认评分。原评分键 2、3、4 均提交“通过”。"
     )
 
     def sync() -> None:
@@ -157,15 +159,15 @@ class SettingsDialog(QDialog):
     def __init__(self, control: PassFailController) -> None:
         super().__init__(control.mw)
         self.control = control
-        self.setWindowTitle(f"复习按钮 · Pass/Fail 2 {VERSION}")
+        self.setWindowTitle(f"复习按钮 · 两档评分 {VERSION}")
         self.resize(580, 500)
         layout = QVBoxLayout(self)
         label = QLabel(
-            "两档模式保留原插件的 Fail／Pass 评分映射。设置适用于本机所有账户；保存后生效并在重启后保留。"
+            "两档模式保留原插件的 失败／通过评分映射。设置适用于本机所有账户；保存后生效并在重启后保留。"
         )
         label.setWordWrap(True)
         layout.addWidget(label)
-        self.enabled = QCheckBox("启用 Pass/Fail 两档评分（关闭时使用原生四档）")
+        self.enabled = QCheckBox("启用 通过／失败两档评分（关闭时使用原生四档）")
         self.enabled.setChecked(control.value["enabled"])
         layout.addWidget(self.enabled)
         self.custom = QCheckBox("启用自定义按钮名称和文字颜色")
@@ -176,8 +178,8 @@ class SettingsDialog(QDialog):
         self.fields: dict[str, QLineEdit] = {}
         self.pickers: list[QPushButton] = []
         self.previews: list[QPushButton] = []
-        for prefix, caption in (("again", "Fail / 重来"), ("good", "Pass / 通过")):
-            name = QLineEdit(control.value[f"{prefix}_button_name"])
+        for prefix, caption in (("again", "失败／重来"), ("good", "通过／良好")):
+            name = QLineEdit(tool_tr(control.value[f"{prefix}_button_name"]))
             self.fields[f"{prefix}_button_name"] = name
             form.addRow(caption + " 名称", name)
             row = QHBoxLayout()

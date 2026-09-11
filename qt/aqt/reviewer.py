@@ -606,40 +606,48 @@ class Reviewer:
                 answer_card_according_to_pressed_key = partial(self._answerCard, ease)
                 yield (key, answer_card_according_to_pressed_key)
 
-        return [
-            ("e", self.mw.onEditCurrent),
-            (" ", self.onEnterKey),
-            (Qt.Key.Key_Return, self.onEnterKey),
-            (Qt.Key.Key_Enter, self.onEnterKey),
-            ("m", self.showContextMenu),
-            ("r", self.replayAudio),
-            (Qt.Key.Key_F5, self.replayAudio),
-            *(
-                (f"Ctrl+{flag.index}", self.set_flag_func(flag.index))
-                for flag in self.mw.flags.all()
-            ),
-            ("*", self.toggle_mark_on_current_note),
-            ("=", self.bury_current_note),
-            ("-", self.bury_current_card),
-            ("!", self.suspend_current_note),
-            ("@", self.suspend_current_card),
-            ("Ctrl+Alt+N", self.forget_current_card),
-            ("Ctrl+Alt+E", self.on_create_copy),
-            ("Ctrl+Backspace" if is_mac else "Ctrl+Delete", self.delete_current_note),
-            ("Ctrl+Shift+D", self.on_set_due),
-            ("v", self.onReplayRecorded),
-            ("Shift+v", self.onRecordVoice),
-            ("o", self.onOptions),
-            ("i", self.on_card_info),
-            ("Ctrl+Alt+i", self.on_previous_card_info),
-            *generate_default_answer_keys(),
-            ("u", self.mw.undo),
-            ("5", self.on_pause_audio),
-            ("6", self.on_seek_backward),
-            ("7", self.on_seek_forward),
-            ("Shift+A", self.toggle_auto_advance),
-            *self.korean_shortcuts(),
-        ]
+        from aqt.builtin_features.review_tools import shortcuts
+
+        return shortcuts(
+            self,
+            [
+                ("e", self.mw.onEditCurrent),
+                (" ", self.onEnterKey),
+                (Qt.Key.Key_Return, self.onEnterKey),
+                (Qt.Key.Key_Enter, self.onEnterKey),
+                ("m", self.showContextMenu),
+                ("r", self.replayAudio),
+                (Qt.Key.Key_F5, self.replayAudio),
+                *(
+                    (f"Ctrl+{flag.index}", self.set_flag_func(flag.index))
+                    for flag in self.mw.flags.all()
+                ),
+                ("*", self.toggle_mark_on_current_note),
+                ("=", self.bury_current_note),
+                ("-", self.bury_current_card),
+                ("!", self.suspend_current_note),
+                ("@", self.suspend_current_card),
+                ("Ctrl+Alt+N", self.forget_current_card),
+                ("Ctrl+Alt+E", self.on_create_copy),
+                (
+                    "Ctrl+Backspace" if is_mac else "Ctrl+Delete",
+                    self.delete_current_note,
+                ),
+                ("Ctrl+Shift+D", self.on_set_due),
+                ("v", self.onReplayRecorded),
+                ("Shift+v", self.onRecordVoice),
+                ("o", self.onOptions),
+                ("i", self.on_card_info),
+                ("Ctrl+Alt+i", self.on_previous_card_info),
+                *generate_default_answer_keys(),
+                ("u", self.mw.undo),
+                ("5", self.on_pause_audio),
+                ("6", self.on_seek_backward),
+                ("7", self.on_seek_forward),
+                ("Shift+A", self.toggle_auto_advance),
+                *self.korean_shortcuts(),
+            ],
+        )
 
     def on_pause_audio(self) -> None:
         av_player.toggle_pause()
@@ -672,6 +680,10 @@ class Reviewer:
             self._answerCard(self._defaultEase())
 
     def _linkHandler(self, url: str) -> None:
+        from aqt.builtin_features.review_tools import command
+
+        if command(self, url):
+            return
         if (
             url in ("ans", "edit", "more") or url.startswith(("ease", "play:"))
         ) and not self.mw.bottomWeb.review_controls_active():
@@ -815,6 +827,10 @@ class Reviewer:
     ##########################################################################
 
     def _bottomHTML(self) -> str:
+        from aqt.builtin_features.review_tools import render
+
+        if isinstance(custom := render(self, "bottom"), str):
+            return custom
         return """
 <center id=outer>
 <table id=innertable width=100%% cellspacing=0 cellpadding=0>
@@ -846,6 +862,10 @@ timerStopped = false;
         )
 
     def _showAnswerButton(self) -> None:
+        from aqt.builtin_features.review_tools import render
+
+        if render(self, "question"):
+            return
         middle = """
 <button title="{}" id="ansbut" onclick='pycmd("ans");'>{}<span class=stattxt>{}</span></button>""".format(
             tr.actions_shortcut_key(val=tr.studying_space()),
@@ -916,10 +936,16 @@ timerStopped = false;
         buttons_tuple = gui_hooks.reviewer_will_init_answer_buttons(
             buttons_tuple, self, self.card
         )
-        return buttons_tuple
+        from aqt.builtin_features.review_tools import decorate_buttons
+
+        return decorate_buttons(buttons_tuple, self)
 
     def _answerButtons(self) -> str:
         from aqt.builtin_features.passfail2 import answer_key_hint
+        from aqt.builtin_features.review_tools import render
+
+        if isinstance(custom := render(self, "buttons"), str):
+            return custom
 
         default = self._defaultEase()
 

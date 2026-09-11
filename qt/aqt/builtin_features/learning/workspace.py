@@ -186,6 +186,7 @@ class LearningWorkspace(QWidget):
         for label, callback in (
             ("详细统计", self.show_graphs),
             ("FSRS 扩展统计（原口径）", self.show_legacy_stats),
+            ("牌组附加统计", self.show_advanced_stats),
             ("刷新", self.refresh),
         ):
             button = QPushButton(label)
@@ -276,6 +277,12 @@ class LearningWorkspace(QWidget):
         self.graph_scope_label = QLabel()
         self.graph_scope_label.setWordWrap(True)
         graph_actions.addWidget(self.graph_scope_label, 1)
+        self.extended_stats = QCheckBox("搜索与扩展统计")
+        self.extended_stats.setChecked(
+            self.mw.review_tools.config.values["policy"]["search_stats_enabled"]
+        )
+        self.extended_stats.toggled.connect(self.toggle_extended_stats)
+        graph_actions.addWidget(self.extended_stats)
         export = QPushButton("导出 PDF")
         export.clicked.connect(self.export_graphs)
         graph_actions.addWidget(export)
@@ -284,6 +291,7 @@ class LearningWorkspace(QWidget):
         graph_actions.addWidget(back)
         graph_layout.addLayout(graph_actions)
         self.graph_web = AnkiWebView(self.mw, kind=AnkiWebViewKind.DECK_STATS)
+        self.mw.review_tools.search_stats.attach(self.graph_web)
         self.graph_web.set_bridge_command(self.graph_bridge, self)
         graph_layout.addWidget(self.graph_web, 1)
         self.pages.addWidget(graph_page)
@@ -459,6 +467,7 @@ class LearningWorkspace(QWidget):
         if self.mw.state != "review":
             return
         self.mw.bottomWeb.set_review_page_visible(visible)
+        self.mw.review_tools.visibility_changed()
         if visible:
             # Reviewer.show() already installs these on entry. Reinstall only
             # after our temporary navigation cleared them, or Qt sees duplicate
@@ -721,6 +730,18 @@ class LearningWorkspace(QWidget):
         )
         self.graph_web.load_sveltekit_page("graphs?" + query)
         self.pages.setCurrentIndex(4)
+
+    def toggle_extended_stats(self, enabled: bool) -> None:
+        config = self.mw.review_tools.config
+        config.save(
+            "policy", config.values["policy"] | {"search_stats_enabled": enabled}
+        )
+        self.show_graphs()
+
+    def show_advanced_stats(self) -> None:
+        from ..review_tools.info import overview_report
+
+        overview_report(self.mw, int(self.deck.currentData() or 0))
 
     def show_legacy_stats(self) -> None:
         self.review_visibility(False)
