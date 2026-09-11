@@ -382,6 +382,15 @@ class Toolbar:
             ),
         ]
 
+        links.append(
+            self.create_link(
+                "import",
+                tr.decks_import_file(),
+                self.mw.onImport,
+                tip=tr.actions_shortcut_key(val="Ctrl+Shift+I"),
+                id="import",
+            )
+        )
         links.append(self._create_sync_link())
 
         gui_hooks.top_toolbar_did_init_links(links, self)

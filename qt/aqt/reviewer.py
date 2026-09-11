@@ -910,6 +910,8 @@ timerStopped = false;
         return buttons_tuple
 
     def _answerButtons(self) -> str:
+        from aqt.builtin_features.passfail2 import answer_key_hint
+
         default = self._defaultEase()
 
         assert isinstance(self.mw.col.sched, V3Scheduler)
@@ -921,11 +923,8 @@ timerStopped = false;
             else:
                 extra = ""
             due = self._buttonTime(i, v3_labels=labels)
-            key = (
-                tr.actions_shortcut_key(val=aqt.mw.pm.get_answer_key(i))
-                if aqt.mw.pm.get_answer_key(i)
-                else ""
-            )
+            answer_key = answer_key_hint(self, i, aqt.mw.pm.get_answer_key(i))
+            key = tr.actions_shortcut_key(val=answer_key) if answer_key else ""
             return """
 <td align=center><button %s title="%s" data-ease="%s" onclick='pycmd("ease%d");'>\
 %s%s</button></td>""" % (

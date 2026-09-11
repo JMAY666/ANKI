@@ -44,6 +44,9 @@ def initialize(mw: AnkiQt) -> None:
     if not synapse.modules_loaded:
         raise RuntimeError("The built-in SynapsePro modules failed to initialize")
     importlib.import_module(".fsrs_helper", __name__)
+    from .passfail2 import install as install_passfail
+
+    install_passfail(mw, _instance.storage)
     from .learning import install
 
     install(mw)
@@ -203,6 +206,8 @@ def write_startup_diagnostics() -> None:
         "collection_open": mw.col is not None,
         "synapsepro_source": synapse.__file__,
         "fsrs_helper_source": fsrs.__file__,
+        "passfail2_source": importlib.import_module(".passfail2", __name__).__file__,
+        "passfail2_enabled": getattr(mw, "passfail2").value["enabled"],
         "synapsepro_menu_count": sum(
             a.text() == "SynapsePro" for a in mw.form.menuTools.actions()
         ),

@@ -13,6 +13,20 @@ builtin-run *args: build
 builtin-test:
     & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py
 
+navigation-test:
+    & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py test_navigation.py
+
+navigation-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/navigation_smoke.py {{run_name}} {{mode}}
+
+navigation-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/learning qt/aqt/builtin_features/passfail2 qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/__init__.py qt/aqt/deckbrowser.py qt/aqt/toolbar.py qt/aqt/reviewer.py scripts/navigation_smoke.py scripts/learning_smoke.py scripts/builtin_tests.py tests/test_navigation.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/learning qt/aqt/builtin_features/passfail2 qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/__init__.py qt/aqt/deckbrowser.py qt/aqt/toolbar.py qt/aqt/reviewer.py scripts/navigation_smoke.py scripts/learning_smoke.py scripts/builtin_tests.py tests/test_navigation.py
+
+navigation-check:
+    & "out/pyenv/Scripts/ruff.exe" check qt/aqt/builtin_features/learning qt/aqt/builtin_features/passfail2 qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/__init__.py qt/aqt/deckbrowser.py qt/aqt/toolbar.py qt/aqt/reviewer.py scripts/navigation_smoke.py scripts/learning_smoke.py scripts/builtin_tests.py tests/test_navigation.py
+    & "out/pyenv/Scripts/mypy.exe" --follow-imports=silent qt/aqt/builtin_features/learning qt/aqt/builtin_features/passfail2 qt/aqt/builtin_features/storage.py qt/aqt/builtin_features/__init__.py qt/aqt/deckbrowser.py qt/aqt/toolbar.py qt/aqt/reviewer.py
+
 learning-smoke run_name mode="write":
     & "out/pyenv/Scripts/python.exe" scripts/learning_smoke.py {{run_name}} {{mode}}
 

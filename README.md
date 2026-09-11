@@ -11,17 +11,21 @@ This repo contains the source code for the computer version of
 
 Anki is a spaced repetition program. Please see the [website](https://apps.ankiweb.net) to learn more.
 
-## 内置 SynapsePro 与 FSRS Helper
+## 内置 SynapsePro、FSRS Helper 与 Pass/Fail 2
 
 本仓库把 SynapsePro 1.6.0-local 与 FSRS Helper 26.05.08 直接集成进 Anki 26.08.1 源码，交付同一个可启动软件，不需要用户安装两个插件。保留 DeepSeek、三栏浏览、学习计划、番茄钟等已确认功能；网页查看器、笔记本与思维导图保持移除，旧数据保留。
 
+Pass/Fail 2 0.3.0 也已内置：复习栏可随时选择原生四档或 Fail／Pass 两档；工具 → 复习按钮提供原插件的名称、文字颜色开关、颜色选择与预览。新用户默认保留四档；旧插件配置和启用状态仅在首次读取时迁入，原件保留。版本来源与所有切换规则见 [Pass/Fail 2 集成说明](docs/PASSFAIL2-INTEGRATION.md)。
+
 源码位于 `qt/aqt/builtin_features/`，由 Anki 初始化并管理配置；旧插件配置可迁入，重复加载会被拦截。三栏浏览同时提供 FSRS Target R，保留原生浏览与复习流程。
 
-构建、启动、迁移和恢复见 [内置功能说明](BUILTIN-FEATURES.md)，本次安装与验证见 [交付记录](docs/BUILTIN-INTEGRATION-2026-09-11.md)。后续修改审核后统一推送 `main`。
+构建、启动、迁移和恢复见 [内置功能说明](BUILTIN-FEATURES.md)，此前两项功能的合并与安装见 [早期交付记录](docs/BUILTIN-INTEGRATION-2026-09-11.md)。后续修改审核后统一推送 `main`。
 
-新增「学习」中心，将概览统计、原生复习、每日 DeepSeek 建议和应用记录连接起来。每日分析需在账户内配置并授权汇总数据；默认关闭，参数仅在确认后应用。Key 在 Windows 保存时使用当前用户加密。使用、口径、边界与验证见 [学习中心说明](docs/LEARNING-WORKSPACE.md)。
+顶部统一使用「统计」，集中展示概览、每日 DeepSeek 建议和应用记录。牌组页面分为目录、当前牌组内容和辅助信息三栏；从中间的卡片入口直接进入原生复习，结束后返回原选中牌组。统计中的牌组选择支持层级搜索，并在附近提供对应牌组选项和共享预设范围。获取、创建牌组位于左栏，导入位于顶部。每日分析需在账户内配置并授权汇总数据；默认关闭，参数仅在确认后应用。Key 在 Windows 保存时使用当前用户加密。使用、口径、边界与验证见 [统计与每日建议说明](docs/LEARNING-WORKSPACE.md)。
 
-本机可运行版本：`dist/Anki-learning-workspace-26.8.1/Anki.exe`。无需单独安装插件，打开后从顶部「学习」进入。
+本机实际使用版本：`dist/Anki-learning-workspace-26.8.1/Anki.exe`。无需单独安装插件；从牌组直接学习，从顶部「统计」查看数据与报告。
+
+导航、牌组三栏、Pass/Fail 切换以及实际软件更新的验证与恢复位置见 [最新交付记录](docs/NAVIGATION-PASSFAIL2-DELIVERY-2026-09-11.md)。
 
 ## Getting Started
 
@@ -73,9 +77,9 @@ just run -b ./out/startup-validation/profile --safemode -l zh_CN
 #### Repository workflow
 
 Follow [AGENTS.md](./AGENTS.md) and the existing [CLAUDE.md](./CLAUDE.md) instructions
-for checks, Git review, and local commits. Local commits do not authorize a push;
-review every outgoing commit, including files deleted later in that history,
-before an authorized push. Keep relevant documentation in the same commit as the
+for checks, Git review, and local commits. The recorded authorization covers pushes
+to `origin/main`; review every outgoing commit, including files deleted later in
+that history, before pushing. Keep relevant documentation in the same commit as the
 change, and review the GitHub About description after a successful push.
 
 #### Contributors

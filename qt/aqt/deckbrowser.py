@@ -6,12 +6,13 @@ from __future__ import annotations
 import html
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import aqt
 import aqt.operations
 from anki.collection import Collection, OpChanges
 from anki.decks import DeckCollapseScope, DeckId, DeckTreeNode
+from anki.scheduler.v3 import Scheduler as V3Scheduler
 from aqt import AnkiQt, gui_hooks
 from aqt.deckoptions import display_options_for_deck_id
 from aqt.operations import QueryOp
@@ -42,6 +43,7 @@ class RenderData:
     current_deck_id: DeckId
     studied_today: str
     sched_upgrade_required: bool
+    current_deck: dict
 
 
 @dataclass
@@ -56,6 +58,7 @@ class DeckBrowserContent:
 
     tree: str
     stats: str
+    auxiliary: str = ""
 
 
 @dataclass
@@ -72,6 +75,9 @@ class DeckBrowser:
         self.bottom = BottomBar(mw, mw.bottomWeb)
         self.scrollPos = QPoint(0, 0)
         self._refresh_needed = False
+        self._selection_revision = 0
+        self._starting_review = False
+        self._render_revision = 0
 
     def show(self) -> None:
         av_player.stop_and_clear_queue()
@@ -109,7 +115,7 @@ class DeckBrowser:
             cmd = url
             arg = ""
         if cmd == "open":
-            self.set_current_deck(DeckId(int(arg)))
+            self.start_review(DeckId(int(arg)))
         elif cmd == "opts":
             self._showOptions(arg)
         elif cmd == "shared":
@@ -131,14 +137,75 @@ class DeckBrowser:
             else:
                 openLink("https://faqs.ankiweb.net/the-2021-scheduler.html")
         elif cmd == "select":
-            set_current_deck(
-                parent=self.mw, deck_id=DeckId(int(arg))
-            ).run_in_background()
+            self.set_current_deck(DeckId(int(arg)))
+        elif cmd == "overview":
+            self.mw.onOverview()
+        elif cmd == "statistics":
+            self.mw.onStats()
+        elif cmd == "browse-deck":
+            from aqt.builtin_features.learning.metrics import scope_query
+
+            aqt.dialogs.open("Browser", self.mw).search_for(
+                scope_query(self.mw.col, int(self.mw.col.decks.selected()), True)
+            )
         return False
 
     def set_current_deck(self, deck_id: DeckId) -> None:
+        self._selection_revision += 1
+        revision = self._selection_revision
         set_current_deck(parent=self.mw, deck_id=deck_id).success(
-            lambda _: self.mw.onOverview()
+            lambda _: (
+                self.refresh()
+                if revision == self._selection_revision
+                and self.mw.state == "deckBrowser"
+                else None
+            )
+        ).run_in_background(initiator=self)
+
+    def start_review(self, deck_id: DeckId) -> None:
+        if self._starting_review or self.mw.state == "review":
+            return
+        if not self.mw.col.v3_scheduler():
+            showInfo("请先使用牌组页面的原生入口升级调度器。", parent=self.mw)
+            return
+        if not self.mw.col.decks.get(deck_id, default=False):
+            showInfo("该牌组已不存在，请重新选择。", parent=self.mw)
+            self.refresh()
+            return
+        self._starting_review = True
+
+        def fail(exc: Exception) -> None:
+            self._starting_review = False
+            showInfo(str(exc), parent=self.mw)
+
+        def ready(has_cards: bool) -> None:
+            self._starting_review = False
+            if (
+                self.mw.state not in ("deckBrowser", "overview")
+                or self.mw.col.decks.selected() != deck_id
+            ):
+                return
+            if not has_cards:
+                self.mw.moveToState("deckBrowser")
+                showInfo(
+                    "当前牌组及其子牌组暂无可学习／复习的卡片。可能尚未到期、达到每日限额，或卡片已暂停／搁置。",
+                    parent=self.mw,
+                )
+                return
+            self.mw.col.startTimebox()
+            self.mw.moveToState("review")
+
+        def selected(_: Any) -> None:
+            QueryOp(
+                parent=self.mw,
+                op=lambda col: bool(
+                    cast(V3Scheduler, col.sched).get_queued_cards(fetch_limit=1).cards
+                ),
+                success=ready,
+            ).failure(fail).run_in_background()
+
+        set_current_deck(parent=self.mw, deck_id=deck_id).success(selected).failure(
+            fail
         ).run_in_background(initiator=self)
 
     # HTML generation
@@ -157,6 +224,8 @@ class DeckBrowser:
 
     def _renderPage(self, reuse: bool = False) -> None:
         if not reuse:
+            self._render_revision += 1
+            revision = self._render_revision
 
             def get_data(col: Collection) -> RenderData:
                 return RenderData(
@@ -164,9 +233,16 @@ class DeckBrowser:
                     current_deck_id=col.decks.get_current_id(),
                     studied_today=col.studied_today(),
                     sched_upgrade_required=not col.v3_scheduler(),
+                    current_deck=col.decks.current(),
                 )
 
             def success(output: RenderData) -> None:
+                if (
+                    revision != self._render_revision
+                    or self.mw.state != "deckBrowser"
+                    or output.current_deck_id != self.mw.col.decks.selected()
+                ):
+                    return
                 self._render_data = output
                 self.__renderPage(None)
 
@@ -185,9 +261,11 @@ class DeckBrowser:
             stats=self._renderStats(),
         )
         gui_hooks.deck_browser_will_render_content(self, content)
+        from aqt.builtin_features.learning.deck_page import render_page
+
         self.web.stdHtml(
             self._v1_upgrade_message(data.sched_upgrade_required)
-            + self._body % content.__dict__,
+            + render_page(self, content),
             css=["css/deckbrowser.css"],
             js=[
                 "js/vendor/jquery.min.js",
@@ -230,7 +308,13 @@ class DeckBrowser:
 
         return buf
 
-    def _render_deck_node(self, node: DeckTreeNode, ctx: RenderDeckNodeContext) -> str:
+    def _render_deck_node(
+        self,
+        node: DeckTreeNode,
+        ctx: RenderDeckNodeContext,
+        path: str = "",
+        ancestors: tuple[int, ...] = (),
+    ) -> str:
         if node.collapsed:
             prefix = "+"
         else:
@@ -244,19 +328,14 @@ class DeckBrowser:
         else:
             klass = "deck"
 
-        buf = (
-            "<tr class='%s' id='%d' onclick='if(event.shiftKey) return pycmd(\"select:%d\")'>"
-            % (
-                klass,
-                node.deck_id,
-                node.deck_id,
-            )
-        )
+        path = f"{path}::{node.name}" if path else node.name
+        full_path = html.escape(path, quote=True)
+        buf = f"<tr class='{klass}' id='{node.deck_id}' data-path='{full_path}' data-ancestors='{','.join(map(str, ancestors))}' data-collapsed='{int(node.collapsed)}'>"
         # deck link
         if node.children:
             collapse = (
-                "<a class=collapse href=# onclick='return pycmd(\"collapse:%d\")'>%s</a>"
-                % (node.deck_id, prefix)
+                "<a class=collapse href=# aria-label='展开或折叠牌组' aria-expanded='%s' onclick='return pycmd(\"collapse:%d\")'>%s</a>"
+                % (str(not node.collapsed).lower(), node.deck_id, prefix)
             )
         else:
             collapse = "<span class=collapse></span>"
@@ -267,10 +346,12 @@ class DeckBrowser:
         buf += """
 
         <td class=decktd colspan=5>%s%s<a class="deck %s"
-        href=# onclick="return pycmd('open:%d')">%s</a></td>""" % (
+        href=# title="%s" aria-current="%s" onclick="return pycmd('select:%d')">%s</a></td>""" % (
             indent(),
             collapse,
             extraclass,
+            full_path,
+            "true" if node.deck_id == ctx.current_deck_id else "false",
             node.deck_id,
             html.escape(node.name),
         )
@@ -291,13 +372,12 @@ class DeckBrowser:
         )
         # options
         buf += (
-            "<td align=center class=opts><a onclick='return pycmd(\"opts:%d\");'>"
+            "<td align=center class=opts><a href='#' aria-label='牌组操作' onclick='return pycmd(\"opts:%d\");'>"
             "<img src='/_anki/imgs/gears.svg' class=gears></a></td></tr>" % node.deck_id
         )
         # children
-        if not node.collapsed:
-            for child in node.children:
-                buf += self._render_deck_node(child, ctx)
+        for child in node.children:
+            buf += self._render_deck_node(child, ctx, path, (*ancestors, node.deck_id))
         return buf
 
     def _topLevelDragRow(self) -> str:
@@ -311,9 +391,6 @@ class DeckBrowser:
         a = m.addAction(tr.actions_rename())
         assert a is not None
         qconnect(a.triggered, lambda b, did=did: self._rename(DeckId(int(did))))
-        a = m.addAction(tr.actions_options())
-        assert a is not None
-        qconnect(a.triggered, lambda b, did=did: self._options(DeckId(int(did))))
         a = m.addAction(tr.actions_export())
         assert a is not None
         qconnect(a.triggered, lambda b, did=did: self._export(DeckId(int(did))))
@@ -373,13 +450,12 @@ class DeckBrowser:
     # Top buttons
     ######################################################################
 
-    drawLinks = [
-        ["", "shared", tr.decks_get_shared()],
-        ["", "create", tr.decks_create_deck()],
-        ["Ctrl+Shift+I", "import", tr.decks_import_file()],
-    ]
+    drawLinks: list[list[str]] = []
 
     def _drawButtons(self) -> None:
+        if not self.drawLinks:
+            self.mw.bottomWeb.hide()
+            return
         buf = ""
         drawLinks = deepcopy(self.drawLinks)
         for b in drawLinks:

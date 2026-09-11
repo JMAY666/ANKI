@@ -130,6 +130,7 @@ try:
     from aqt.builtin_features.learning import metrics, service, workspace
     from aqt.builtin_features.learning.settings import OWN_KEY, secret_path
     from aqt.builtin_features.protected_secrets import write_secrets
+    from aqt.progress import ProgressDialog
     from aqt.qt import QApplication, QLabel, QShortcut, QTimer
 
     app = aqt._run(
@@ -140,7 +141,7 @@ try:
 
     def dialog_guard():
         modal = QApplication.activeModalWidget()
-        if modal:
+        if modal and not isinstance(modal, ProgressDialog):
             text = " | ".join(label.text() for label in modal.findChildren(QLabel))
             results["errors"].append(text)
             modal.reject()
@@ -236,7 +237,7 @@ try:
                 store, report_id, snapshot, settings, key, requester=fake_api, **kwargs
             )
         )
-        w.open(2)
+        w.open(1)
         before_cards = col.db.all("SELECT * FROM cards ORDER BY id")
         before_reviews = col.db.all("SELECT * FROM revlog ORDER BY id")
         w.analyze_button.click()
@@ -266,7 +267,7 @@ try:
             and col.db.all("SELECT * FROM revlog ORDER BY id") == before_reviews
             and col.db.all("SELECT * FROM cards ORDER BY id") == before_cards,
         )
-        w.open(3)
+        w.open(2)
         w.confirm_revert()
         wait(lambda: w.store.actions()[0]["status"] == "reverted")
         check(
@@ -285,8 +286,8 @@ try:
         )
         first_card, started = mw.reviewer.card.id, mw.reviewer.card.timer_started
         rating_key = mw.pm.get_answer_key(3)
-        w.open(1)
-        w.open(1)
+        w.show_review()
+        w.show_review()
         check(
             "rating shortcut is registered exactly once",
             sum(
@@ -302,7 +303,7 @@ try:
             "hidden reviewer cannot auto-reveal an answer",
             mw.reviewer.state == "question",
         )
-        w.open(1)
+        w.show_review()
         check(
             "native auto-advance choice survives temporary navigation",
             mw.reviewer.auto_advance_enabled,
@@ -324,7 +325,7 @@ try:
             and mw.reviewer.state == "answer"
             and mw.reviewer.card.timer_started == started,
         )
-        w.open(1)
+        w.show_review()
         check(
             "template and media survive navigation",
             "Synthetic answer" in js(mw.web, "document.querySelector('#qa').innerText")
@@ -363,14 +364,14 @@ try:
         w.finish_button.click()
         wait(
             lambda: (
-                mw.state == "overview"
-                and w.pages.currentIndex() == 0
+                mw.state == "deckBrowser"
+                and w.pages.currentWidget() is w.native
                 and not w.refreshing
             )
         )
         check(
-            "finishing opens refreshed scoped result",
-            "1 次评分" in w.result.text()
+            "finishing returns to the selected deck with a durable result",
+            col.decks.selected() == did
             and metrics.session_summary(
                 col, json.loads(w.store.sessions()[0]["events"])
             )["reviews"]
@@ -398,7 +399,7 @@ try:
             "reverted limit remains restored",
             metrics.parameters(col, did)["override"] is None,
         )
-        w.open(3)
+        w.open(2)
         screenshot("history")
     w.profile_close()
     mw.pm.save()

@@ -155,3 +155,101 @@ tr:hover:not(.top-level-drag-row) {
 #studiedToday {
     margin: 2em 0;
 }
+
+/* Keep the active deck prominent, while retaining the existing native actions. */
+body:has(.deck-workspace) {
+    margin: 0 !important;
+    overflow: auto !important;
+}
+
+.deck-workspace {
+    display: grid;
+    grid-template-columns: minmax(190px, 250px) minmax(300px, 1fr) minmax(230px, 300px);
+    align-items: start;
+    gap: 20px;
+    padding: 24px;
+    color: var(--fg);
+    text-align: start;
+    box-sizing: border-box;
+
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    h1, h2, h3 { margin: 0 0 12px; overflow-wrap: anywhere; }
+    h1 { font-size: 27px; line-height: 1.35; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    button { white-space: normal; cursor: pointer; }
+    summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
+}
+
+.deck-directory, .deck-main, .deck-auxiliary {
+    min-width: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 18px;
+    background: var(--canvas);
+}
+
+.deck-directory { position: sticky; top: 16px; padding: 16px 10px; }
+#deck-search { width: 100%; min-width: 0; padding: 9px; margin: 0 0 10px; }
+.deck-tree-scroll { overflow: auto; max-height: calc(100vh - 245px); min-height: 130px; }
+.deck-workspace table.deck-tree {
+    display: table;
+    width: 100%; padding: 0; margin: 0; border: 0; box-shadow: none;
+    tr { display: flex; width: 100%; }
+    tr:first-child { display: none; }
+    td { padding: 7px 3px !important; border: 0; }
+    td:not(.decktd, .opts) { display: none; }
+    .decktd { display: flex; align-items: center; min-width: 0; max-width: none; flex: 1; overflow: hidden; }
+    .opts { width: 24px; flex: none; }
+    a.deck { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px; }
+    .collapse { flex: none; }
+    .gears { visibility: visible; }
+    .current td { background: var(--border-subtle); font-weight: 600; }
+    .top-level-drag-row { min-height: 7px; }
+    .top-level-drag-row td { display: block; width: 100%; }
+}
+.deck-directory-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.deck-directory-actions button { flex: 1; }
+.deck-main { padding: 28px; }
+.deck-eyebrow, .deck-muted { opacity: .7; font-size: 13px; line-height: 1.6; }
+.deck-eyebrow { display: block; margin-bottom: 8px; }
+.deck-study-cards { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.deck-workspace .deck-study-card { display: flex; width: 100%; flex-direction: column; align-items: start; gap: 16px; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 20px; margin: 28px 0 20px; background: var(--canvas-inset); }
+.deck-card-count { display: flex; flex-direction: column; align-items: start; gap: 14px; }
+.deck-card-entry { font-size: 12px; opacity: .7; }
+.deck-study-card strong { font-size: 28px; }
+.deck-workspace .deck-start { background: #376d57; color: white; border: 0; border-radius: 9px; font-size: 16px; font-weight: 600; padding: 13px 30px; width: 100%; }
+.deck-main-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.deck-description { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-subtle); font-size: 13px; }
+.deck-scope-info { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
+.deck-selected-path { overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; padding: 7px; border-left: 3px solid #478266; background: var(--canvas-inset); }
+.deck-global-widgets { min-width: 0; }
+.deck-auxiliary {
+    #gamification-widgets-container { flex-direction: column; width: 100%; min-width: 0; padding: 0 !important; }
+    .gamewidget { flex: 0 0 auto !important; width: 100%; min-width: 0 !important; max-width: 100% !important; }
+    .sp-min-box { width: 100% !important; max-width: 100% !important; margin: 12px 0 !important; transform: none !important; }
+    .sp-min-primary, .sp-min-statistics, .sp-min-plan-fact-row { grid-template-columns: 1fr !important; }
+    .sp-min-study-plan, .sp-min-deadline-box { display: flex; flex-wrap: wrap; }
+    #studiedToday { margin: 12px 0; white-space: normal; }
+    > details > div { max-width: 100%; min-width: 0; }
+    .stats-widget-container, #daily-widgets-container { width: 100% !important; min-width: 0 !important; grid-template-columns: minmax(0, 1fr) !important; flex-direction: column; }
+    .stat-block { border-right: 0 !important; min-width: 0 !important; }
+    .daily-widget { width: 100% !important; min-width: 0 !important; max-width: 100% !important; }
+    .fact-widget-content { flex-direction: column; }
+    .fact-widget-content img { max-width: 100%; }
+}
+@media (max-width: 1100px) {
+    .deck-workspace { grid-template-columns: 210px minmax(0, 1fr); gap: 14px; padding: 16px; }
+    .deck-auxiliary { grid-column: 2; }
+    .deck-directory { grid-row: span 2; }
+}
+@media (max-width: 650px) {
+    .deck-workspace { grid-template-columns: minmax(0, 1fr); padding: 10px; }
+    .deck-directory { position: static; grid-row: auto; }
+    .deck-tree-scroll { max-height: 180px; min-height: 0; }
+    .deck-auxiliary { grid-column: 1; }
+    .deck-main { padding: 20px; }
+    .deck-study-cards { gap: 6px; }
+    .deck-workspace .deck-study-card { padding: 12px 8px; }
+}

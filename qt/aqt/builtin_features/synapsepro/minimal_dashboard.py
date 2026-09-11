@@ -457,7 +457,7 @@ def render_minimal_dashboard_sections(
     <script>
       (function() {{
         function deckBox() {{
-          return document.querySelector('.decks-container') ||
+          return document.querySelector('.deck-auxiliary') || document.querySelector('.decks-container') ||
                  document.querySelector('body.deckbrowser > center > table') ||
                  document.querySelector('center > table');
         }}
@@ -472,6 +472,7 @@ def render_minimal_dashboard_sections(
           }});
         }}
         function syncStatisticsGap() {{
+          if (document.querySelector('.deck-workspace')) return;
           var overview = document.querySelector('.sp-min-deadline-box') || document.querySelector('.sp-min-overview');
           var target = deckBox();
           var statistics = document.querySelector('.sp-min-statistics');

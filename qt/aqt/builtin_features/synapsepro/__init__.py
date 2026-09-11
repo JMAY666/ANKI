@@ -1282,7 +1282,7 @@ def render_all_deck_browser_widgets(deck_browser: DeckBrowser, content: DeckBrow
         print(f"SynapsePro: celebration popup error: {e}")
 
     content.stats = compact_stats_html + stats_html + celebrate_html + getattr(content, 'stats', '')
-    content.tree = compact_html + gamification_html + daily_html + deadline_html + getattr(content, 'tree', '')
+    content.auxiliary = compact_html + gamification_html + daily_html + deadline_html + getattr(content, 'auxiliary', '')
 
 # --- Study-plan countdown timers ------------------------------------------------
 # Fire a "time's up" notification when a subject's timer runs out — even while the

@@ -22,6 +22,7 @@ from aqt.qt import (
     QVBoxLayout,
 )
 
+from .deck_select import DeckTreeSelect
 from .storage import LearningStore
 
 OWN_KEY = "learning_workspace_deepseek"
@@ -54,13 +55,13 @@ class SettingsDialog(QDialog):
         layout.addWidget(description)
         form = QFormLayout()
         layout.addLayout(form)
-        self.deck = QComboBox()
-        self.deck.addItem("请选择一个普通牌组", 0)
+        self.deck = DeckTreeSelect()
+        entries = [("请选择一个普通牌组", 0)]
         for deck in parent.mw.col.decks.all_names_and_ids():
             item = parent.mw.col.decks.get(deck.id)
             if not item.get("dyn"):
-                self.deck.addItem(deck.name, int(deck.id))
-        self.deck.setCurrentIndex(max(0, self.deck.findData(self.value["deck_id"])))
+                entries.append((deck.name, int(deck.id)))
+        self.deck.set_decks(entries, self.value["deck_id"])
         form.addRow("每日分析牌组", self.deck)
         self.include_children = QCheckBox("包含子牌组；调整仅作用于所选牌组的新卡限额")
         self.include_children.setChecked(self.value["include_children"])

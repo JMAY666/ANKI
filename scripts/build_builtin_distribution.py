@@ -43,6 +43,9 @@ required = [
     "aqt/builtin_features/learning/workspace.py",
     "aqt/builtin_features/learning/provider.py",
     "aqt/builtin_features/protected_secrets.py",
+    "aqt/builtin_features/learning/deck_select.py",
+    "aqt/builtin_features/passfail2/__init__.py",
+    "aqt/builtin_features/passfail2/LICENSE",
 ]
 for name in required:
     assert (packages / name).is_file(), name
@@ -51,10 +54,11 @@ from verify_web_runtime import verify
 verify(packages / "_aqt/data/web/sveltekit")
 assert not (destination / "addons21").exists()
 manifest = {
-    "edition": "Anki 26.8.1 with built-in SynapsePro and FSRS Helper",
+    "edition": "Anki 26.8.1 with built-in SynapsePro, FSRS Helper and Pass/Fail 2",
     "synapsepro": "1.6.0-local, d7b6c5e20 (DeepSeek changes from 4eed59734)",
     "fsrs_helper": "26.05.08, prepared checkout 85ad582; runtime c7219f5",
-    "learning_workspace": "1: native review, scoped statistics and confirmed daily DeepSeek suggestions",
+    "passfail2": "0.3.0, AnkiWeb archive fb4c98a63d76384204b59cea75702939cc23b6e7f4eb6c73c307b2a810573c4f; native/two-grade mode switching",
+    "learning_workspace": "2: three-column decks, direct native review, searchable statistics scope and confirmed daily DeepSeek suggestions",
     "wheels": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in wheels},
     "runtime": "Existing Anki 26.8.1 Windows Python/Qt launcher and dependencies",
 }

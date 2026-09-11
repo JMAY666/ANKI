@@ -70,7 +70,7 @@ def show(mw: aqt.AnkiQt) -> QDialog:
     abouttext += f"<p>{lede}"
     abouttext += f"<p>{tr.about_anki_is_licensed_under_the_agpl3()}"
     abouttext += f"<p>{tr.about_version(val=version_with_build())}<br>"
-    abouttext += "内置 SynapsePro 1.6.0-local（含 DeepSeek） · FSRS Helper 26.05.08<br>"
+    abouttext += "内置 SynapsePro 1.6.0-local（含 DeepSeek） · FSRS Helper 26.05.08 · Pass/Fail 2 0.3.0<br>"
     abouttext += ("Python %s Qt %s Chromium %s<br>") % (
         platform.python_version(),
         qVersion(),

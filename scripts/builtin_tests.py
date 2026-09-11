@@ -6,6 +6,8 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(root / p) for p in ("qt", "pylib", "out/qt", "out/pylib")]
-suite = unittest.defaultTestLoader.discover(str(root / "tests"))
+suite = unittest.defaultTestLoader.discover(
+    str(root / "tests"), pattern=sys.argv[1] if len(sys.argv) > 1 else "test*.py"
+)
 result = unittest.TextTestRunner(verbosity=2).run(suite)
 sys.exit(not result.wasSuccessful())

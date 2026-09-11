@@ -44,6 +44,7 @@ from aqt.theme import theme_manager
 from aqt.utils import askUser, getSaveFile, showInfo, tooltip
 from aqt.webview import AnkiWebView, AnkiWebViewKind
 
+from .deck_select import DeckTreeSelect
 from .metrics import collect_snapshot, scope_query, session_summary
 from .policy import DAY, application_blocker
 from .service import (
@@ -110,13 +111,25 @@ class LearningWorkspace(QWidget):
         self.header.setObjectName("learningHeader")
         head = QVBoxLayout(self.header)
         row = QHBoxLayout()
-        title = QLabel("学习")
+        title = QLabel("统计")
         title.setObjectName("learningTitle")
         row.addWidget(title)
-        self.deck = QComboBox()
-        self.deck.setAccessibleName("学习范围")
+        self.deck = DeckTreeSelect()
+        self.deck.setAccessibleName("统计牌组")
         self.deck.setMinimumWidth(150)
         row.addWidget(self.deck, 1)
+        self.deck_options_button = QPushButton("牌组选项")
+        self.deck_options_button.clicked.connect(self.deck_options)
+        row.addWidget(self.deck_options_button)
+        self.resume_button = QPushButton("继续复习")
+        self.resume_button.clicked.connect(self.show_review)
+        row.addWidget(self.resume_button)
+        self.resume_button.hide()
+        head.addLayout(row)
+        self.preset_scope = QLabel()
+        self.preset_scope.setWordWrap(True)
+        head.addWidget(self.preset_scope)
+        row = QHBoxLayout()
         self.include_children = QCheckBox("含子牌组")
         self.include_children.setChecked(True)
         row.addWidget(self.include_children)
@@ -134,20 +147,18 @@ class LearningWorkspace(QWidget):
         self.settings_button = settings
         settings.clicked.connect(self.settings)
         row.addWidget(settings)
-        self.finish_button = QPushButton("结束本次")
-        self.finish_button.clicked.connect(lambda: self.mw.moveToState("overview"))
-        row.addWidget(self.finish_button)
-        self.finish_button.hide()
+        row.addStretch()
         head.addLayout(row)
         self.tabs = QTabBar()
         self.tabs.setExpanding(False)
-        for text in ("概览统计", "复习", "AI 建议", "记录"):
+        for text in ("概览统计", "AI 建议", "记录"):
             self.tabs.addTab(text)
         head.addWidget(self.tabs)
         self.status = QLabel("实际统计来自本机学习记录；AI 分析另行标注。")
         self.status.setWordWrap(True)
         head.addWidget(self.status)
         layout.addWidget(self.header)
+        self._build_review_bar(layout)
         self.pages = QStackedWidget()
         layout.addWidget(self.pages, 1)
 
@@ -155,9 +166,8 @@ class LearningWorkspace(QWidget):
         overview = QVBoxLayout(self.overview)
         actions = QHBoxLayout()
         for label, callback in (
-            ("开始本牌组复习", self.start_review),
             ("查看范围内卡片", self.browse_scope),
-            ("原牌组概览与工具", self.native_overview),
+            ("牌组工具", self.native_overview),
         ):
             button = QPushButton(label)
             button.clicked.connect(callback)
@@ -242,6 +252,21 @@ class LearningWorkspace(QWidget):
         self.tabs.currentChanged.connect(self.open)
         self.update_theme()
 
+    def _build_review_bar(self, layout: QVBoxLayout) -> None:
+        from ..passfail2 import mode_selector
+
+        self.review_bar = QWidget()
+        review_actions = QHBoxLayout(self.review_bar)
+        self.review_label = QLabel()
+        self.review_label.setWordWrap(True)
+        review_actions.addWidget(self.review_label, 1)
+        review_actions.addWidget(mode_selector(self.mw))
+        self.finish_button = QPushButton("结束复习 · 返回牌组")
+        self.finish_button.clicked.connect(lambda: self.mw.moveToState("deckBrowser"))
+        review_actions.addWidget(self.finish_button)
+        layout.addWidget(self.review_bar)
+        self.review_bar.hide()
+
     def _build_graph_page(self) -> None:
         graph_page = QWidget()
         graph_layout = QVBoxLayout(graph_page)
@@ -271,24 +296,11 @@ class LearningWorkspace(QWidget):
         gui_hooks.sync_will_start.append(self.sync_start)
         gui_hooks.sync_did_finish.append(self.sync_finished)
         gui_hooks.theme_did_change.append(self.update_theme)
-        gui_hooks.top_toolbar_did_init_links.append(self.toolbar_link)
-        action = QAction("学习中心", self.mw)
+        action = QAction("统计", self.mw)
         action.triggered.connect(lambda: self.open(0))
         self.mw.form.menuTools.addAction(action)
         helper = importlib.import_module("aqt.builtin_features.fsrs_helper")
-        helper.menu_for_helper.addAction("每日 AI 分析…", lambda: self.open(2))
-
-    def toolbar_link(self, links: list[str], toolbar: Any) -> None:
-        links.insert(
-            0,
-            toolbar.create_link(
-                "learningWorkspace",
-                "学习",
-                lambda: self.open(0),
-                tip="统计、复习与每日建议",
-                id="learning-workspace",
-            ),
-        )
+        helper.menu_for_helper.addAction("每日 AI 分析…", lambda: self.open(1))
 
     def update_theme(self, *args: Any) -> None:
         dark = theme_manager.night_mode
@@ -334,6 +346,7 @@ class LearningWorkspace(QWidget):
         self.paused_timers.clear()
         self.paused_auto_advance = None
         self.header.hide()
+        self.review_bar.hide()
         self.pages.setCurrentWidget(self.native)
         self.graph_web.load_url(QUrl("about:blank"))
 
@@ -346,17 +359,51 @@ class LearningWorkspace(QWidget):
             else int(self.mw.col.decks.selected())
         )
         self.changing = True
-        self.deck.clear()
-        self.deck.addItem("全部牌组", 0)
-        for item in self.mw.col.decks.all_names_and_ids():
-            self.deck.addItem(item.name, int(item.id))
-        self.deck.setCurrentIndex(max(0, self.deck.findData(current)))
+        self.deck.set_decks(
+            [("全部牌组", 0)]
+            + [
+                (item.name, int(item.id))
+                for item in self.mw.col.decks.all_names_and_ids()
+            ],
+            current,
+        )
         self.changing = False
+        self.update_deck_settings()
+
+    def update_deck_settings(self) -> None:
+        self.preset_scope.setToolTip("")
+        did = self.deck.currentData()
+        deck = self.mw.col.decks.get(DeckId(did), default=False) if did else None
+        self.deck_options_button.setEnabled(bool(deck))
+        if not deck:
+            self.preset_scope.setText("选择一个具体牌组后可调整其选项。")
+            return
+        if deck.get("dyn"):
+            self.preset_scope.setText(f"筛选牌组设置：{deck['name']}。")
+            return
+        preset = self.mw.col.decks.config_dict_for_deck_id(DeckId(did))
+        names = [
+            item["name"]
+            for item in self.mw.col.decks.all()
+            if not item.get("dyn") and item.get("conf") == preset["id"]
+        ]
+        self.preset_scope.setText(
+            f"当前牌组：{deck['name']} · 预设「{preset['name']}」由 {len(names)} 个牌组共享。修改预设会影响这些牌组。"
+        )
+        self.preset_scope.setToolTip("\n".join(names))
+
+    def deck_options(self) -> None:
+        from aqt.deckoptions import display_options_for_deck_id
+
+        did = self.deck.currentData()
+        if did and self.mw.col.decks.get(DeckId(did), default=False):
+            display_options_for_deck_id(DeckId(did))
 
     def scope_changed(self, *args: Any) -> None:
         if self.changing:
             return
         self.snapshot = None
+        self.update_deck_settings()
         self.refresh()
         if self.pages.currentIndex() == 4:
             self.show_graphs()
@@ -365,34 +412,39 @@ class LearningWorkspace(QWidget):
         if self.changing or not self.mw.col or not self.store:
             return
         if self.mw.state == "review" and self.mw.reviewer.state == "transition":
-            self.changing = True
-            self.tabs.setCurrentIndex(1)
-            self.changing = False
             return
+        was_visible = self.header.isVisible()
+        self.fill_decks()
+        if not was_visible:
+            self.changing = True
+            self.deck.setCurrentIndex(
+                max(0, self.deck.findData(int(self.mw.col.decks.selected())))
+            )
+            self.changing = False
+            self.update_deck_settings()
         self.header.show()
-        self.finish_button.setVisible(self.mw.state == "review")
-        compact = tab == 1 and self.mw.state == "review"
-        for widget in (
-            self.days,
-            self.include_children,
-            self.settings_button,
-            self.status,
-        ):
-            widget.setVisible(not compact)
+        self.review_bar.hide()
+        self.resume_button.setVisible(self.mw.state == "review")
         self.changing = True
         self.tabs.setCurrentIndex(tab)
         self.changing = False
-        if tab == 1 and self.mw.state != "review":
-            self.start_review()
-            return
-        self.pages.setCurrentIndex(tab)
-        self.review_visibility(tab == 1)
+        self.pages.setCurrentIndex((0, 2, 3)[tab])
+        self.review_visibility(False)
         self.deck.setEnabled(self.mw.state != "review")
         self.include_children.setEnabled(self.mw.state != "review")
         if tab == 0:
             self.refresh()
-        elif tab in (2, 3):
+        elif tab in (1, 2):
             self.read_history()
+
+    def show_review(self) -> None:
+        if self.mw.state != "review":
+            return
+        self.header.hide()
+        self.review_bar.show()
+        self.review_label.setText("复习 · " + self.mw.col.decks.current()["name"])
+        self.pages.setCurrentWidget(self.native)
+        self.review_visibility(True)
 
     def review_visibility(self, visible: bool) -> None:
         if self.mw.state != "review":
@@ -445,21 +497,26 @@ class LearningWorkspace(QWidget):
                 self.changing = True
                 self.deck.setCurrentIndex(max(0, self.deck.findData(int(deck["id"]))))
                 self.changing = False
-            self.open(1)
-        elif new == "overview" and not self.legacy_navigation:
-            self.changing = True
-            self.deck.setCurrentIndex(
-                max(0, self.deck.findData(int(self.mw.col.decks.selected())))
-            )
-            self.changing = False
-            self.open(0)
+            self.show_review()
         elif new in ("deckBrowser", "overview", "resetRequired", "profileManager"):
             self.header.hide()
+            self.review_bar.hide()
             self.pages.setCurrentWidget(self.native)
+            if new == "overview" and old == "review" and not self.legacy_navigation:
+                QTimer.singleShot(
+                    0,
+                    lambda: (
+                        self.mw.moveToState("deckBrowser")
+                        if self.mw.state == "overview"
+                        else None
+                    ),
+                )
         self.legacy_navigation = False
 
     def operation_done(self, changes: Any, handler: Any) -> None:
         self.sync_quiet_until = time.monotonic() + 10
+        if self.store and self.header.isVisible():
+            self.fill_decks()
         if self.store and self.pages.currentIndex() == 0 and not self.refreshing:
             QTimer.singleShot(0, self.refresh)
 
@@ -503,7 +560,7 @@ class LearningWorkspace(QWidget):
 
     def start_review(self) -> None:
         if self.mw.state == "review":
-            self.open(1)
+            self.show_review()
             return
         did = self.deck.currentData()
         if not did:
@@ -523,13 +580,7 @@ class LearningWorkspace(QWidget):
             )
             return
 
-        def started(_: Any) -> None:
-            self.mw.col.startTimebox()
-            self.mw.moveToState("review")
-
-        set_current_deck(parent=self, deck_id=DeckId(did)).success(
-            started
-        ).run_in_background()
+        self.mw.deckBrowser.start_review(DeckId(did))
 
     def native_overview(self) -> None:
         if self.mw.state == "review":

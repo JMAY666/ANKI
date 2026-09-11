@@ -13,6 +13,8 @@ LEGACY_IDS = {
     "236979321": "synapsepro",
     "SynapsePro1": "synapsepro",
     "759844606": "fsrs_helper",
+    "876946123": "passfail2",
+    "PassFail2": "passfail2",
 }
 
 
@@ -52,6 +54,7 @@ class FeatureStorage:
         self.base = base
         self.root = base / "builtin_features"
         self.fsrs_path = self.root / "fsrs_helper.json"
+        self.passfail_path = self.root / "passfail2.json"
         self.defaults = read_object(Path(__file__).parent / "fsrs_helper/config.json")
 
     def migrate_fsrs(self) -> None:
@@ -74,6 +77,47 @@ class FeatureStorage:
     def load_fsrs(self) -> dict[str, Any]:
         settings = dict(self.defaults)
         settings.update(read_object(self.fsrs_path))
+        return settings
+
+    def load_passfail(self) -> dict[str, Any]:
+        from .passfail2 import DEFAULTS, validate
+
+        settings = dict(DEFAULTS)
+        if self.passfail_path.exists():
+            settings.update(read_object(self.passfail_path))
+            validate(settings)
+            return settings
+        addons = self.base / "addons21"
+        candidates = [addons / name for name in ("876946123", "PassFail2")]
+        if addons.is_dir():
+            for manifest in sorted(addons.glob("*/manifest.json")):
+                try:
+                    package = read_object(manifest).get("package")
+                except (OSError, ValueError):
+                    continue
+                if manifest.parent not in candidates and package in (
+                    "876946123",
+                    "PassFail2",
+                ):
+                    candidates.append(manifest.parent)
+        for legacy in candidates:
+            if not legacy.is_dir():
+                continue
+            if (legacy / "config.json").exists():
+                settings.update(read_object(legacy / "config.json"))
+            meta = (
+                read_object(legacy / "meta.json")
+                if (legacy / "meta.json").exists()
+                else {}
+            )
+            override = meta.get("config", {})
+            if not isinstance(override, dict):
+                raise ValueError("Pass/Fail 2 legacy config must be an object")
+            settings.update(override)
+            settings["enabled"] = not meta.get("disabled", False)
+            break
+        validate(settings)
+        write_object(self.passfail_path, settings)
         return settings
 
     def prepare_profile(self, profile: Path) -> None:
