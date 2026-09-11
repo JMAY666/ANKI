@@ -53,6 +53,9 @@ def initialize(mw: AnkiQt) -> None:
     from .learning import install
 
     install(mw)
+    from .desktop_tools import install as install_desktop_tools
+
+    install_desktop_tools(mw, _instance.storage)
     _instance.ready = True
     if os.environ.get("ANKI_BUILTIN_DIAGNOSTICS") == "1":
         gui_hooks.profile_did_open.append(

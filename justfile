@@ -6,6 +6,22 @@ mod release
 default:
     @just --list
 
+desktop-tools-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/desktop_tools qt/tests/test_desktop_tools.py scripts/desktop_tools_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/desktop_tools qt/tests/test_desktop_tools.py scripts/desktop_tools_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/about.py qt/aqt/main.py
+    & "node_modules/.bin/dprint.cmd" fmt qt/aqt/builtin_features/desktop_tools/SOURCE.md docs/DESKTOP-TOOLS.md README.md BUILTIN-FEATURES.md
+
+desktop-tools-test:
+    $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_desktop_tools.py
+
+desktop-tools-check:
+    & "out/pyenv/Scripts/ruff.exe" check qt/aqt/builtin_features/desktop_tools qt/tests/test_desktop_tools.py scripts/desktop_tools_smoke.py
+    & "out/pyenv/Scripts/mypy.exe" --follow-imports=silent qt/aqt/builtin_features/desktop_tools
+
+desktop-tools-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/desktop_tools_smoke.py {{run_name}} {{mode}}
+
 experience-format:
     & "out/pyenv/Scripts/ruff.exe" check --select I --fix scripts/experience_soundcloud.py
     & "out/pyenv/Scripts/ruff.exe" format scripts/experience_soundcloud.py

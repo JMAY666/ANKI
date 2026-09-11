@@ -1267,7 +1267,22 @@ title="{}" {}>{}</button>""".format(
     # App exit
     ##########################################################################
 
+    def close_from_menu(self) -> None:
+        desktop = getattr(self, "desktop_tools", None)
+        tray = desktop.tray if desktop else None
+        if tray:
+            tray.bypass = True
+        try:
+            self.close()
+        finally:
+            if tray:
+                tray.bypass = False
+
     def closeEvent(self, event: QCloseEvent) -> None:
+        desktop = getattr(self, "desktop_tools", None)
+        if desktop and desktop.tray and desktop.tray.intercept_close():
+            event.ignore()
+            return
         if self.state == "profileManager":
             # if profile manager active, this event may fire via OS X menu bar's
             # quit option
@@ -1460,7 +1475,7 @@ title="{}" {}>{}</button>""".format(
         qconnect(m.actionExport.triggered, self.onExport)
         qconnect(m.action_create_backup.triggered, self.on_create_backup_now)
         qconnect(m.action_open_backup.triggered, self.onOpenBackup)
-        qconnect(m.actionExit.triggered, self.close)
+        qconnect(m.actionExit.triggered, self.close_from_menu)
 
         # Help
         qconnect(m.actionDocumentation.triggered, self.onDocumentation)

@@ -13,6 +13,7 @@ lint.select = [
 # have syntax, behavior, and real Qt integration checks in builtin-test/smoke.
 force-exclude = true
 extend-exclude = [
+  "qt/aqt/builtin_features/desktop_tools/renderer.py",
   "*_pb2.py",
   "*_pb2.pyi",
   "qt/aqt/builtin_features/synapsepro",

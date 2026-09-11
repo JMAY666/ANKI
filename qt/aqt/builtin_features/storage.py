@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 LEGACY_IDS = {
+    "85158043": "minimize_to_tray",
+    "812527193": "ankipendown",
     "236979321": "synapsepro",
     "SynapsePro1": "synapsepro",
     "759844606": "fsrs_helper",

@@ -36,6 +36,10 @@ for wheel in wheels:
             assert target.is_relative_to(packages)
         archive.extractall(packages)
 required = [
+    "aqt/builtin_features/desktop_tools/__init__.py",
+    "aqt/builtin_features/desktop_tools/renderer.py",
+    "aqt/builtin_features/desktop_tools/LICENSE",
+    "aqt/builtin_features/desktop_tools/SOURCE.md",
     "aqt/main.py", "aqt/builtin_features/__init__.py",
     "aqt/builtin_features/synapsepro/chat_ui.html",
     "aqt/builtin_features/fsrs_helper/locale/zh_CN.json",
@@ -67,6 +71,7 @@ from verify_web_runtime import verify
 verify(packages / "_aqt/data/web/sveltekit")
 assert not (destination / "addons21").exists()
 manifest = {
+    "desktop_tools": "Minimize to Tray 2 0.2; AnkiPenDown 1.1; native lifecycle and Simplified Chinese settings",
     "edition": "Anki 26.8.1 with built-in SynapsePro, FSRS Helper and Pass/Fail 2",
     "synapsepro": "1.6.0-local, d7b6c5e20 (DeepSeek changes from 4eed59734)",
     "fsrs_helper": "26.05.08, prepared checkout 85ad582; runtime c7219f5",

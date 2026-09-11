@@ -21,6 +21,8 @@ use camino::Utf8Path;
 use walkdir::WalkDir;
 
 const NONSTANDARD_HEADER: &[&str] = &[
+    "./qt/aqt/builtin_features/desktop_tools/renderer.py",
+    "./qt/aqt/builtin_features/desktop_tools/tray.py",
     "./pylib/anki/_vendor/stringcase.py",
     "./pylib/anki/statsbg.py",
     "./qt/aqt/mpv.py",
