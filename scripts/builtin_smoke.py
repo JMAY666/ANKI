@@ -98,7 +98,7 @@ def prepare():
     for index, cid in enumerate(col.find_cards("")):
         card = col.get_card(cid)
         card.type = card.queue = 2
-        card.ivl = 20
+        card.ivl = (10, 20, 40)[index % 3]
         card.due = col.sched.today + (0 if index < 8 else 5)
         card.reps = 3
         col.update_card(card)
@@ -374,8 +374,16 @@ try:
     wait(lambda: not workspace.loading and not workspace.inflight)
     check(
         "Target R sorting works in three pane browser",
-        browser.table._state.sort_column == "target_retrievability",
+        browser.table._state.sort_column == "target_retrievability"
+        and not workspace.error
+        and browser.table.len() == len(col.find_cards(browser._lastSearchTxt)),
     )
+    values = [float(custom._display_value(col.get_card(cid)).rstrip("%")) for cid in browser.table._model._items]
+    check("Target R rows are numerically descending", len(set(values)) > 1 and values == sorted(values, reverse=True))
+    browser.table._on_sort_column_changed(3, Qt.SortOrder.AscendingOrder)
+    wait(lambda: not workspace.loading and not workspace.inflight)
+    values = [float(custom._display_value(col.get_card(cid)).rstrip("%")) for cid in browser.table._model._items]
+    check("Target R rows are numerically ascending", values == sorted(values))
     browser.grab().save(str(BASE / (mode + "-browser.png")))
     for _ in range(2):
         workspace.set_enabled(False)

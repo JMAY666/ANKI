@@ -13,6 +13,20 @@ builtin-run *args: build
 builtin-test:
     & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py
 
+learning-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/learning_smoke.py {{run_name}} {{mode}}
+
+learning-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/learning qt/aqt/builtin_features/protected_secrets.py scripts/learning_smoke.py tests/test_learning_workspace.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/learning qt/aqt/builtin_features/protected_secrets.py scripts/learning_smoke.py tests/test_learning_workspace.py
+
+learning-check:
+    & "out/pyenv/Scripts/ruff.exe" check qt/aqt/builtin_features/learning qt/aqt/builtin_features/protected_secrets.py scripts/learning_smoke.py tests/test_learning_workspace.py
+    & "out/pyenv/Scripts/mypy.exe" --follow-imports=silent qt/aqt/builtin_features/learning qt/aqt/builtin_features/protected_secrets.py
+
+learning-assets-check:
+    & "out/pyenv/Scripts/python.exe" scripts/verify_web_runtime.py out/qt/_aqt/data/web/sveltekit
+
 builtin-browser-smoke run_name:
     & "out/pyenv/Scripts/python.exe" scripts/browser_smoke.py {{run_name}}
 

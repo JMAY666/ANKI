@@ -19,6 +19,10 @@ Anki is a spaced repetition program. Please see the [website](https://apps.ankiw
 
 构建、启动、迁移和恢复见 [内置功能说明](BUILTIN-FEATURES.md)，本次安装与验证见 [交付记录](docs/BUILTIN-INTEGRATION-2026-09-11.md)。后续修改审核后统一推送 `main`。
 
+新增「学习」中心，将概览统计、原生复习、每日 DeepSeek 建议和应用记录连接起来。每日分析需在账户内配置并授权汇总数据；默认关闭，参数仅在确认后应用。Key 在 Windows 保存时使用当前用户加密。使用、口径、边界与验证见 [学习中心说明](docs/LEARNING-WORKSPACE.md)。
+
+本机可运行版本：`dist/Anki-learning-workspace-26.8.1/Anki.exe`。无需单独安装插件，打开后从顶部「学习」进入。
+
 ## Getting Started
 
 ### Contributing

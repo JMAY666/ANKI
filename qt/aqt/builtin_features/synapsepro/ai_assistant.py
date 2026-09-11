@@ -225,8 +225,9 @@ def _load_secret_map() -> Dict[str, str]:
     if not path or not os.path.isfile(path):
         return {}
     try:
-        with open(path, "r", encoding="utf-8") as handle:
-            value = json.load(handle)
+        from aqt.builtin_features.protected_secrets import read_secrets
+        from pathlib import Path
+        value = read_secrets(Path(path))
         if isinstance(value, dict):
             return {str(k): str(v) for k, v in value.items() if isinstance(v, str)}
     except Exception as exc:
@@ -240,13 +241,17 @@ def _save_secret_map(values: Dict[str, str]) -> None:
         return
     tmp = path + ".tmp"
     try:
-        with open(tmp, "w", encoding="utf-8") as handle:
-            json.dump(values, handle, indent=2)
-        try:
+        from aqt.builtin_features.protected_secrets import write_secrets
+        from pathlib import Path
+        if os.name == "nt":
+            write_secrets(Path(path), values)
+        else:
+            # Preserve existing non-Windows chat behavior. The learning
+            # workspace's independent credential writer still requires DPAPI.
+            with open(tmp, "w", encoding="utf-8") as handle:
+                json.dump(values, handle, indent=2)
             os.chmod(tmp, 0o600)
-        except OSError:
-            pass
-        os.replace(tmp, path)
+            os.replace(tmp, path)
     except Exception as exc:
         print(f"AI Assistant: secret file write error: {exc}")
         try:

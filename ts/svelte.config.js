@@ -1,5 +1,6 @@
 import adapter from "@sveltejs/adapter-static";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import preprocess from "svelte-preprocess";
 import { fileURLToPath } from "url";
@@ -14,6 +15,11 @@ const config = {
     preprocess: [vitePreprocess(), preprocess()],
 
     kit: {
+        // Static fallback generation reloads config in another worker. A
+        // timestamp default can give HTML and client code different globals.
+        // Asset filenames remain content-hashed; the application version is
+        // identical across all workers in this build.
+        version: { name: readFileSync(join(tsFolder, "../.version"), "utf8").trim() },
         adapter: adapter(
             { pages: "../out/sveltekit", fallback: "index.html", precompress: false },
         ),

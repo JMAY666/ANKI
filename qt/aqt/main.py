@@ -1336,6 +1336,10 @@ title="{}" {}>{}</button>""".format(
         self.moveToState("overview")
 
     def onStats(self) -> None:
+        workspace = getattr(self, "learning_workspace", None)
+        if workspace is not None and not KeyboardModifiersPressed().shift:
+            workspace.open(0)
+            return
         deck = self._selectedDeck()
         if not deck:
             return

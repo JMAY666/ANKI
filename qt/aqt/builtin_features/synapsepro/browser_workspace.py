@@ -670,9 +670,16 @@ class BrowserWorkspace(QObject):
         self.pending = None
         self.inflight = True
         revision, query, column, reverse = request
+        # Preserve the native browser's search hook contract before dispatch.
+        # Custom columns (including FSRS Target R) supply their SQL ordering here.
+        from aqt.browser import SearchContext
+        context = SearchContext(search=query, browser=self.browser)
+        context.order = column or True
+        context.reverse = reverse
+        gui_hooks.browser_will_search(context)
         QueryOp(
             parent=self.browser,
-            op=lambda col: col.find_cards(query, order=column or True, reverse=reverse),
+            op=lambda col: context.ids if context.ids is not None else col.find_cards(context.search, order=context.order, reverse=context.reverse),
             success=lambda ids: self._search_finished(request, ids),
         ).failure(
             lambda exc: self._search_finished(request, [], exc)

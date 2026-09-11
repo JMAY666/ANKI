@@ -61,7 +61,11 @@ class AIRegression(unittest.TestCase):
         self.assertNotIn(ai.CK_KEY_DEEPSEEK, self.col.values)
         self.assertNotIn("synthetic-deepseek", json.dumps(self.col.values))
         secrets = json.loads(Path(ai._secret_path()).read_text())
-        self.assertEqual(secrets[ai.CK_KEY_DEEPSEEK], "synthetic-deepseek")
+        from aqt.builtin_features.protected_secrets import read_secrets
+
+        if ai.os.name == "nt":
+            self.assertNotIn("synthetic-deepseek", json.dumps(secrets))
+        self.assertEqual(read_secrets(Path(ai._secret_path()))[ai.CK_KEY_DEEPSEEK], "synthetic-deepseek")
         ai._save_settings_dict(dict(provider="deepseek", apiKey="", model=""))
         self.assertFalse(ai._load_settings("deepseek")["isConfigured"])
         self.assertEqual(ai._load_settings("deepseek")["model"], "deepseek-flash")

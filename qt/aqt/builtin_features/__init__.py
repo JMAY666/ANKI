@@ -44,6 +44,9 @@ def initialize(mw: AnkiQt) -> None:
     if not synapse.modules_loaded:
         raise RuntimeError("The built-in SynapsePro modules failed to initialize")
     importlib.import_module(".fsrs_helper", __name__)
+    from .learning import install
+
+    install(mw)
     _instance.ready = True
     if os.environ.get("ANKI_BUILTIN_DIAGNOSTICS") == "1":
         gui_hooks.profile_did_open.append(
