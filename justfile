@@ -6,6 +6,14 @@ mod release
 default:
     @just --list
 
+deck-workspace-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix scripts/deck_workspace_smoke.py qt/aqt/builtin_features/learning/deck_page.py
+    & "out/pyenv/Scripts/ruff.exe" format scripts/deck_workspace_smoke.py qt/aqt/builtin_features/learning/deck_page.py
+    & "node_modules/.bin/dprint.cmd" fmt qt/aqt/data/web/js/deckbrowser.ts README.md docs/DECK-WORKSPACE-LAYOUT.md
+
+deck-workspace-smoke run_name mode="write":
+    & "out/pyenv/Scripts/python.exe" scripts/deck_workspace_smoke.py {{run_name}} {{mode}}
+
 desktop-tools-format:
     & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/desktop_tools qt/tests/test_desktop_tools.py scripts/desktop_tools_smoke.py
     & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/desktop_tools qt/tests/test_desktop_tools.py scripts/desktop_tools_smoke.py

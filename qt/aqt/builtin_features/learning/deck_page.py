@@ -32,7 +32,7 @@ def render_page(browser: Any, content: Any) -> str:
     description = html.escape(deck.get("desc", ""))
     return f"""
 <div class="deck-workspace" data-selected-deck="{did}" data-render-revision="{browser._render_revision}">
-  <aside class="deck-directory" aria-label="牌组目录">
+  <aside id="deck-directory" class="deck-directory" aria-label="牌组目录">
     <h2>牌组</h2>
     <p class="deck-selected-path" aria-label="当前选中的牌组">当前：{name}</p>
     <input id="deck-search" type="search" placeholder="搜索牌组或路径" aria-label="搜索牌组目录">
@@ -43,7 +43,11 @@ def render_page(browser: Any, content: Any) -> str:
       <button onclick="pycmd('shared')">{tr.decks_get_shared()}</button>
     </div>
   </aside>
-  <main class="deck-main" aria-label="当前牌组内容">
+  <div class="deck-splitter" role="separator" tabindex="0" aria-orientation="vertical"
+       aria-label="调整牌组目录宽度" aria-controls="deck-directory" aria-valuemin="190"
+       aria-valuemax="480" aria-valuenow="250" title="拖动调整牌组目录宽度；方向键微调，双击恢复默认"></div>
+  <main class="deck-content" aria-label="当前牌组内容">
+  <section class="deck-main" aria-label="当前牌组学习面板">
     <span class="deck-eyebrow">当前牌组</span><h1>{name}</h1>
     <p class="deck-muted">今天的学习，从这里开始。</p>
     <button class="deck-study-card" onclick="pycmd('open:{did}')" aria-label="{name}的卡片：直接开始学习" title="从当前牌组及其子牌组的原生队列开始；下列为分类计数"><span class="deck-study-cards">{entries}</span><span class="deck-card-entry">进入本牌组学习 →</span></button>
@@ -55,11 +59,12 @@ def render_page(browser: Any, content: Any) -> str:
       <button onclick="pycmd('statistics')">查看统计</button>
     </div>
     {f'<div class="deck-description">{description}</div>' if description else ""}
-  </main>
+  </section>
   <details class="deck-auxiliary" open>
     <summary>辅助信息</summary>
     <section class="deck-scope-info"><h3>{name}</h3><p>{"筛选牌组" if deck.get("dyn") else "普通牌组"} · {children} 个子牌组</p><p>当前队列计数：{sum(counts)} 张</p><button onclick="pycmd('statistics')">统计与牌组选项</button></section>
     <details class="deck-global-widgets"><summary>账户辅助面板 · 全部牌组</summary>{content.auxiliary}{content.stats}</details>
   </details>
+  </main>
 </div>
 """

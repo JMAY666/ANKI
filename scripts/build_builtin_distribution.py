@@ -76,7 +76,7 @@ manifest = {
     "synapsepro": "1.6.0-local, d7b6c5e20 (DeepSeek changes from 4eed59734)",
     "fsrs_helper": "26.05.08, prepared checkout 85ad582; runtime c7219f5",
     "passfail2": "0.3.0, AnkiWeb archive fb4c98a63d76384204b59cea75702939cc23b6e7f4eb6c73c307b2a810573c4f; native/two-grade mode switching",
-    "learning_workspace": "2: three-column decks, direct native review, searchable statistics scope and confirmed daily DeepSeek suggestions",
+    "learning_workspace": "3: resizable deck directory, responsive information cards below study panel, direct native review, searchable statistics scope and confirmed daily DeepSeek suggestions",
     "review_layout": "1: persistent resizable card viewport, legacy iframe resizing and content-sized review controls",
     "review_shortcuts": "1: question-only Space/Enter, two-grade 1=Fail/2=Pass, scoped input and stale-event protection",
     "experience_fixes": "2026-09-12: quick switches, optional review toolbar, visible-card audio gating, incremental deck interactions, SoundCloud playlist-loop API handling (live end-to-end playback unverified)",
