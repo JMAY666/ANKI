@@ -13,7 +13,9 @@ Anki is a spaced repetition program. Please see the [website](https://apps.ankiw
 
 ## 内置 SynapsePro、FSRS Helper 与 Pass/Fail 2
 
-新增内置 **Minimize to Tray 2 0.2** 与 **AnkiPenDown 1.1**，入口为「SynapsePro 左侧快捷栏 → 托盘与手写」。按用户确认，默认点击 × 正常退出，可按需开启托盘隐藏；卡片手写保留双画笔、荧光笔、笔画橡皮、撤销与画布设置，设置按账户保存，菜单与控件已接入简体中文。实际使用版本更新在 `dist/Anki-experience-final-26.8.1/Anki.exe`。来源、配置兼容、验证和回退见 [托盘与手写说明](docs/DESKTOP-TOOLS.md)。
+新增 **双栏复习**：从 SynapsePro 左侧快捷栏开启，两栏独立选牌组、翻面和评分，共用原调度与学习记录；支持重叠牌组避让、激活栏快捷键与音频、全局撤销、拖动栏宽和窄窗标签切换。新版启动包为 `dist/Anki-dual-review-26.8.1/Anki.exe`，操作、兼容范围和验证命令见 [双栏复习说明](docs/DUAL-REVIEW.md)。
+
+新增内置 **Minimize to Tray 2 0.2** 与 **AnkiPenDown 1.1**，入口为「SynapsePro 左侧快捷栏 → 托盘与手写」。按用户确认，默认点击 × 正常退出，可按需开启托盘隐藏；卡片手写保留双画笔、荧光笔、笔画橡皮、撤销与画布设置，设置按账户保存，菜单与控件已接入简体中文。实际使用版本更新在 `dist/Anki-dual-review-26.8.1/Anki.exe`。来源、配置兼容、验证和回退见 [托盘与手写说明](docs/DESKTOP-TOOLS.md)。
 
 本仓库把 SynapsePro 1.6.0-local 与 FSRS Helper 26.05.08 直接集成进 Anki 26.08.1 源码，交付同一个可启动软件，不需要用户安装两个插件。保留 DeepSeek、三栏浏览、学习计划、番茄钟等已确认功能；网页查看器、笔记本与思维导图保持移除，旧数据保留。
 
@@ -27,7 +29,7 @@ Pass/Fail 2 0.3.0 也已内置：复习栏可随时选择原生四档或 Fail／
 
 顶部统一使用「统计」，集中展示概览、每日 DeepSeek 建议和应用记录。牌组页面左侧目录支持拖动分隔条调宽，辅助信息和账户卡片位于主学习面板下方并自动分列，窄窗上下排列；从中间的卡片入口直接进入原生复习，结束后返回原选中牌组。分隔条支持方向键微调和双击复位，当前会话记住宽度，见 [牌组布局说明](docs/DECK-WORKSPACE-LAYOUT.md)。统计中的牌组选择支持层级搜索，并在附近提供对应牌组选项和共享预设范围。获取、创建牌组位于左栏，导入位于顶部。每日分析需在账户内配置并授权汇总数据；默认关闭，参数仅在确认后应用。Key 在 Windows 保存时使用当前用户加密。使用、口径、边界与验证见 [统计与每日建议说明](docs/LEARNING-WORKSPACE.md)。
 
-本机实际使用版本：`dist/Anki-experience-final-26.8.1/Anki.exe`。无需单独安装插件；从牌组直接学习，从顶部「统计」查看数据与报告。
+本机实际使用版本：`dist/Anki-dual-review-26.8.1/Anki.exe`。无需单独安装插件；从牌组直接学习，从顶部「统计」查看数据与报告。
 
 复习时，空格／Enter 只在正面显示答案；答案面用明确评分键继续。两档固定为 1 失败、2 通过，3／4 不评分；四档默认仍为 1／2／3／4。输入、输入法组合、弹窗以及非复习页面不接管复习键。详细映射、配置与验证边界见 [复习快捷键说明](docs/REVIEW-SHORTCUTS.md)。
 

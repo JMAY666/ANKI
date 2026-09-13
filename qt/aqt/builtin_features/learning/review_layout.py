@@ -141,6 +141,7 @@ class CardViewport(QWidget):
         web.setParent(self)
         self.save_settings = save
         self.ratios = (1.0, 1.0)
+        self.minimum_card_width = MIN_CARD_WIDTH
         self.reviewing = False
         self.handles = {
             edge: ResizeHandle(self, edge) for edge in ("left", "right", "bottom")
@@ -150,7 +151,7 @@ class CardViewport(QWidget):
     def set_reviewing(self, reviewing: bool) -> None:
         self.reviewing = reviewing
         self.setMinimumSize(
-            max(MIN_CARD_WIDTH, self.web.minimumWidth()) + 2 * HANDLE
+            max(self.minimum_card_width, self.web.minimumWidth()) + 2 * HANDLE
             if reviewing
             else self.web.minimumWidth(),
             MIN_CARD_HEIGHT + HANDLE if reviewing else 0,
@@ -175,7 +176,8 @@ class CardViewport(QWidget):
         available_width = max(1, self.width() - 2 * HANDLE)
         available_height = max(1, self.height() - HANDLE)
         width = min(
-            available_width, max(MIN_CARD_WIDTH, self.web.minimumWidth(), width)
+            available_width,
+            max(self.minimum_card_width, self.web.minimumWidth(), width),
         )
         height = min(available_height, max(MIN_CARD_HEIGHT, height))
         self.ratios = (width / available_width, height / available_height)
@@ -194,7 +196,7 @@ class CardViewport(QWidget):
         width = min(
             available_width,
             max(
-                MIN_CARD_WIDTH,
+                self.minimum_card_width,
                 self.web.minimumWidth(),
                 round(available_width * self.ratios[0]),
             ),

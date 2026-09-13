@@ -123,6 +123,9 @@ def test_bottom_content_belongs_to_the_active_page(
 def test_review_actions_are_ignored_outside_the_active_reviewer(command: str) -> None:
     reviewer = cast(Reviewer, MagicMock(spec=Reviewer))
     reviewer.mw = MagicMock()
+    reviewer.mw.dual_review = None
+    reviewer.review_panel.return_value = None
+    reviewer.controls_active.return_value = False
     reviewer.mw.bottomWeb.review_controls_active.return_value = False
     Reviewer._linkHandler(reviewer, command)
     reviewer._getTypedAnswer.assert_not_called()
@@ -136,6 +139,8 @@ def test_background_review_state_callback_still_completes_while_statistics_are_o
 ):
     reviewer = cast(Reviewer, MagicMock(spec=Reviewer))
     reviewer.mw = MagicMock()
+    reviewer.mw.dual_review = None
+    reviewer.review_panel.return_value = None
     reviewer.mw.bottomWeb.review_controls_active.return_value = False
     reviewer._states_mutated = False
     Reviewer._linkHandler(reviewer, "statesMutated")

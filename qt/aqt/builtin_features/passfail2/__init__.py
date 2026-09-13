@@ -105,6 +105,9 @@ class PassFailController(QObject):
         write_object(self.storage.passfail_path, value)
         self.value = dict(value)
         self.changed.emit()
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.managed:
+            return
         # Redraw only the controls: keep the card, face, timer and scheduler state.
         reviewer = self.mw.reviewer
         reviewer.shortcuts.invalidate()

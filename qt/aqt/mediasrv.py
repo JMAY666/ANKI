@@ -707,10 +707,39 @@ def get_scheduling_states_with_context() -> bytes:
     ).SerializeToString()
 
 
+def get_review_scheduling_states_with_context() -> bytes:
+    from anki.generic_pb2 import String
+
+    key = String.FromString(request.data).val
+    reviewer = aqt.mw.reviewer
+    owner = getattr(aqt.mw, "dual_review", None)
+    if owner and owner.managed:
+        matched_reviewer = next(
+            (p.reviewer for p in owner.panels if p.reviewer._state_mutation_key == key),
+            None,
+        )
+        if matched_reviewer is None:
+            raise ValueError("obsolete review state request")
+        reviewer = matched_reviewer
+    return SchedulingStatesWithContext(
+        states=reviewer.get_scheduling_states(),
+        context=reviewer.get_scheduling_context(),
+    ).SerializeToString()
+
+
 def set_scheduling_states() -> bytes:
     states = SetSchedulingStatesRequest()
     states.ParseFromString(request.data)
-    aqt.mw.reviewer.set_scheduling_states(states)
+    owner = getattr(aqt.mw, "dual_review", None)
+    reviewers = (
+        [p.reviewer for p in owner.panels]
+        if owner and owner.managed
+        else [aqt.mw.reviewer]
+    )
+    for reviewer in reviewers:
+        if reviewer._state_mutation_key == states.key:
+            reviewer.set_scheduling_states(states)
+            break
     return b""
 
 
@@ -1119,6 +1148,7 @@ post_handler_list = [
     get_deck_configs_for_update,
     update_deck_configs,
     get_scheduling_states_with_context,
+    get_review_scheduling_states_with_context,
     set_scheduling_states,
     change_notetype,
     import_done,
@@ -1314,6 +1344,7 @@ def _check_dynamic_request_permissions():
     # whitelisted API endpoints for reviewer/previewer
     if request.path in (
         "/_anki/getSchedulingStatesWithContext",
+        "/_anki/getReviewSchedulingStatesWithContext",
         "/_anki/setSchedulingStates",
         "/_anki/i18nResources",
         "/_anki/congratsInfo",

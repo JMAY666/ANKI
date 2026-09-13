@@ -205,6 +205,13 @@ class SidebarWidget(QWidget):
         }
 
         from .quick_switches import open_quick_switches
+        self._dual_review_button = self.create_icon_button("dual_review.svg", "双栏复习")
+        if self._dual_review_button:
+            self._dual_review_button.setObjectName("dualReviewLauncher")
+            self._dual_review_button.setAccessibleName("双栏复习")
+            self._dual_review_button.clicked.connect(lambda: mw.dual_review.toggle())
+            main_layout.addWidget(self._dual_review_button)
+
         self._quick_button = self.create_icon_button("quick_switches.svg", "快捷开关")
         if self._quick_button:
             self._quick_button.installEventFilter(self)

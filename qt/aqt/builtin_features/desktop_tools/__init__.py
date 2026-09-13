@@ -104,6 +104,13 @@ class DesktopTools:
         if self.tray:
             self.tray.apply()
         self.refresh()
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.managed:
+            current = self.mw.reviewer
+            for panel in owner.panels:
+                if panel.reviewer is not current and panel.reviewer.card:
+                    with owner.render_context(panel.reviewer):
+                        self.refresh()
 
     def set_enabled(self, enabled: bool) -> None:
         if self.loaded:

@@ -5,7 +5,7 @@ import type { JsonValue } from "@bufbuild/protobuf";
 import type { SchedulingStatesWithContext } from "@generated/anki/frontend_pb";
 import type { SchedulingContext } from "@generated/anki/scheduler_pb";
 import { SchedulingStates } from "@generated/anki/scheduler_pb";
-import { getSchedulingStatesWithContext, setSchedulingStates } from "@generated/backend";
+import { getReviewSchedulingStatesWithContext, setSchedulingStates } from "@generated/backend";
 
 interface CustomDataStates {
     again: Record<string, unknown>;
@@ -46,7 +46,7 @@ export async function mutateNextCardStates(
     key: string,
     transform: StateMutatorFn,
 ): Promise<void> {
-    const statesWithContext = await getSchedulingStatesWithContext({});
+    const statesWithContext = await getReviewSchedulingStatesWithContext({ val: key });
     const updatedStates = await applyStateTransform(statesWithContext, transform);
     await setSchedulingStates({ key, states: updatedStates });
 }

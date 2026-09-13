@@ -9,8 +9,8 @@ import re
 from collections.abc import Callable, Generator, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
-from functools import partial
-from typing import Any, Literal, Match, Union, cast
+from functools import partial, wraps
+from typing import Any, Literal, Match, TypeVar, Union, cast
 
 import aqt
 import aqt.browser
@@ -147,13 +147,31 @@ class QuestionAction(Enum):
     SHOW_REMINDER = 1
 
 
+ReviewMethod = TypeVar("ReviewMethod", bound=Callable[..., Any])
+
+
+def reviewer_context(method: ReviewMethod) -> ReviewMethod:
+    """Keep legacy synchronous hooks scoped to the renderer emitting them."""
+
+    @wraps(method)
+    def scoped(self: Reviewer, *args: Any, **kwargs: Any) -> Any:
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.managed:
+            with owner.render_context(self):
+                return method(self, *args, **kwargs)
+        return method(self, *args, **kwargs)
+
+    return cast(ReviewMethod, scoped)
+
+
 class Reviewer:
-    def __init__(self, mw: AnkiQt) -> None:
+    def __init__(self, mw: AnkiQt, web=None, bottom_web=None) -> None:
         self.mw = mw
-        self.web = mw.web
+        self.web = web if web is not None else mw.web
         self.card: Card | None = None
         self.previous_card: Card | None = None
         self._audio_revision = 0
+        self._visible_audio_revision: int | None = None
         self._pending_visible_audio: (
             tuple[int, Card | None, str, list[AVTag]] | None
         ) = None
@@ -165,7 +183,9 @@ class Reviewer:
         self._refresh_needed: RefreshNeeded | None = None
         self._v3: V3CardInfo | None = None
         self._state_mutation_key = str(random.randint(0, 2**64 - 1))
-        self.bottom = BottomBar(mw, mw.bottomWeb)
+        self.bottom = BottomBar(
+            mw, bottom_web if bottom_web is not None else mw.bottomWeb
+        )
         self._card_info = ReviewerCardInfo(self.mw)
         self._previous_card_info = PreviousReviewerCardInfo(self.mw)
         self._states_mutated = True
@@ -180,7 +200,25 @@ class Reviewer:
         self._pending_typed_answer: object | None = None
         gui_hooks.av_player_did_end_playing.append(self._on_av_player_did_end_playing)
 
+    def review_panel(self):
+        owner = getattr(self.mw, "dual_review", None)
+        return owner.panel_for(self) if owner and owner.managed else None
+
+    def controls_active(self) -> bool:
+        panel = self.review_panel()
+        return self.bottom.web.review_controls_active() and (
+            panel is None or panel.can_act()
+        )
+
+    def focus_card(self) -> None:
+        panel = self.review_panel()
+        if panel is None or panel.owner.active is panel:
+            self.web.setFocus()
+
     def show(self) -> None:
+        if panel := self.review_panel():
+            panel.owner.show_review()
+            return
         if self.mw.col.sched_ver() == 1 or not self.mw.col.v3_scheduler():
             self.mw.moveToState("deckBrowser")
             show_warning(tr.scheduling_update_required().replace("V2", "v3"))
@@ -233,6 +271,9 @@ class Reviewer:
     def op_executed(
         self, changes: OpChanges, handler: object | None, focused: bool
     ) -> bool:
+        if panel := self.review_panel():
+            panel.owner.changed(changes, handler)
+            return False
         if handler is not self:
             if changes.study_queues:
                 self._refresh_needed = RefreshNeeded.QUEUES
@@ -257,6 +298,9 @@ class Reviewer:
     ##########################################################################
 
     def nextCard(self) -> None:
+        if panel := self.review_panel():
+            panel.next_card()
+            return
         self._cancel_pending_audio()
         self.previous_card = self.card
         self.card = None
@@ -313,6 +357,9 @@ class Reviewer:
     ##########################################################################
 
     def replayAudio(self) -> None:
+        if panel := self.review_panel():
+            panel.owner.activate(panel)
+            panel.owner.audio_owner = self
         if self.state == "question":
             replay_audio(self.card, True)
         elif self.state == "answer":
@@ -352,6 +399,7 @@ class Reviewer:
 {extra}
 """
 
+    @reviewer_context
     def _initWeb(self) -> None:
         self._reps = 0
         # main window
@@ -385,19 +433,24 @@ class Reviewer:
     def _mungeQA(self, buf: str) -> str:
         return self.typeAnsFilter(self.mw.prepare_card_text_for_display(buf))
 
+    @reviewer_context
     def _showQuestion(self) -> None:
         self._cancel_pending_audio()
         self.shortcuts.invalidate()
         self._pending_typed_answer = None
         self._reps += 1
         self.state = "question"
+        self._state_mutation_key = str(random.randint(0, 2**64 - 1))
         self.typedAnswer: str | None = None
         c = self.card
         # grab the question and play audio
         q = c.question()
         # play audio?
         if c.autoplay():
-            self.web.setPlaybackRequiresGesture(False)
+            panel = self.review_panel()
+            self.web.setPlaybackRequiresGesture(
+                panel is not None and panel.owner.active is not panel
+            )
             sounds = c.question_av_tags()
             gui_hooks.reviewer_will_play_question_sounds(c, sounds)
         else:
@@ -420,7 +473,7 @@ class Reviewer:
         self._update_flag_icon()
         self._update_mark_icon()
         self._showAnswerButton()
-        self.mw.web.setFocus()
+        self.focus_card()
         # user hook
         gui_hooks.reviewer_did_show_question(c)
 
@@ -428,9 +481,14 @@ class Reviewer:
         self._audio_revision = getattr(self, "_audio_revision", 0) + 1
         self._pending_visible_audio = None
         self._clear_auto_advance_timers()
-        av_player.stop_and_clear_queue()
+        self._visible_audio_revision = None
+        panel = self.review_panel()
+        if panel is None or panel.owner.audio_owner is self:
+            av_player.stop_and_clear_queue()
+            if panel:
+                panel.owner.audio_owner = None
 
-    def _play_visible_audio(self, revision: str) -> None:
+    def _play_visible_audio(self, revision: str, *, acknowledged: bool = True) -> None:
         pending = getattr(self, "_pending_visible_audio", None)
         if not pending:
             return
@@ -440,12 +498,27 @@ class Reviewer:
             or self.card is not card
             or self.state != side
             or self.mw.state != "review"
+        ):
+            return
+        if acknowledged:
+            self._visible_audio_revision = token
+        if (
+            getattr(self, "_visible_audio_revision", None) != token
             or not self.web.isVisible()
-            or not self.mw.bottomWeb.review_controls_active()
+            or not self.controls_active()
+            or (
+                (panel := self.review_panel()) is not None
+                and panel.owner.active is not panel
+            )
         ):
             return
         self._pending_visible_audio = None
-        av_player.play_tags(sounds)
+        if panel := self.review_panel():
+            if sounds:
+                panel.owner.audio_owner = self
+                av_player.play_tags(sounds)
+        else:
+            av_player.play_tags(sounds)
         if side == "question":
             self._auto_advance_to_answer_if_enabled()
         else:
@@ -504,11 +577,12 @@ class Reviewer:
     # Showing the answer
     ##########################################################################
 
+    @reviewer_context
     def _showAnswer(self) -> None:
         if (
             self.mw.state != "review"
             or self.state != "question"
-            or not self.mw.bottomWeb.review_controls_active()
+            or not self.controls_active()
         ):
             # showing resetRequired screen; ignore space
             return
@@ -531,7 +605,7 @@ class Reviewer:
         # render and update bottom
         self.web.eval(f"_showAnswer({json.dumps(a)}, '', {self._audio_revision});")
         self._showEaseButtons()
-        self.mw.web.setFocus()
+        self.focus_card()
         # user hook
         gui_hooks.reviewer_did_show_answer(c)
 
@@ -580,12 +654,15 @@ class Reviewer:
     # Answering a card
     ############################################################
 
+    @reviewer_context
     def _answerCard(self, ease: Literal[1, 2, 3, 4]) -> None:
         "Reschedule card and show next."
         if self.mw.state != "review":
             # showing resetRequired screen; ignore key
             return
         if self.state != "answer":
+            return
+        if not self.controls_active() or not self._states_mutated:
             return
         proceed, ease = gui_hooks.reviewer_will_answer_card(
             (True, ease), self, self.card
@@ -610,10 +687,14 @@ class Reviewer:
                 self.onLeech(suspended)
 
         self.state = "transition"
+        if panel := self.review_panel():
+            panel.submit(answer, after_answer)
+            return
         answer_card(parent=self.mw, answer=answer).success(
             after_answer
         ).run_in_background(initiator=self)
 
+    @reviewer_context
     def _after_answering(self, ease: Literal[1, 2, 3, 4]) -> None:
         gui_hooks.reviewer_did_answer_card(self, self.card, ease)
         self._answeredIds.append(self.card.id)
@@ -723,7 +804,24 @@ class Reviewer:
         if self.state == "question":
             self._getTypedAnswer()
 
+    @reviewer_context
     def _linkHandler(self, url: str) -> None:
+        if panel := self.review_panel():
+            if url.startswith("dualReviewKey:"):
+                panel.owner.web_shortcut(self, url)
+                return
+            if url == "dualReviewFocus":
+                focus = self.shortcuts.focus_web(self.mw.app.focusWidget())
+                if focus in (self.web, self.bottom.web):
+                    panel.owner.activate(panel)
+                return
+            if url == "dualReviewRefresh":
+                panel.next_card(keep=True)
+                return
+            if url in ("ans", "edit", "more") or url.startswith(
+                ("ease", "play:", "builtinReview:")
+            ):
+                panel.owner.activate(panel)
         from aqt.builtin_features.review_tools import command
 
         if url.startswith("reviewVisible:"):
@@ -736,7 +834,7 @@ class Reviewer:
             return
         if (
             url in ("ans", "edit", "more") or url.startswith(("ease", "play:"))
-        ) and not self.mw.bottomWeb.review_controls_active():
+        ) and not self.controls_active():
             return
         if url == "ans":
             self._getTypedAnswer()
@@ -748,6 +846,8 @@ class Reviewer:
         elif url == "more":
             self.showContextMenu()
         elif url.startswith("play:"):
+            if panel := self.review_panel():
+                panel.owner.audio_owner = self
             play_clicked_audio(url, self.card)
         elif url == "reviewBottomSizeChanged":
             self.bottom.web.adjustHeightToFit()
@@ -756,8 +856,12 @@ class Reviewer:
         elif url == "repaintNeeded":
             # Ensure stale frames showing previous or corrupt content are not displayed (#3668)
             self.web.update()
-        elif url == "statesMutated":
+        elif (
+            url == "statesMutated" or url == "statesMutated:" + self._state_mutation_key
+        ):
             self._states_mutated = True
+        elif url.startswith("statesMutated:"):
+            return
         else:
             print("unrecognized anki link:", url)
 
@@ -930,6 +1034,7 @@ timerStopped = false;
             time=self.card.time_taken() // 1000,
         )
 
+    @reviewer_context
     def _showAnswerButton(self) -> None:
         from aqt.builtin_features.review_tools import render
 
@@ -953,7 +1058,10 @@ timerStopped = false;
         self.bottom.web.eval("showQuestion(%s,%d);" % (json.dumps(middle), maxTime))
         self.bottom.web.adjustHeightToFit()
 
+    @reviewer_context
     def _showEaseButtons(self) -> None:
+        if self.review_panel() and (not self.card or not self.controls_active()):
+            return
         if not self._states_mutated:
             self.mw.progress.single_shot(50, self._showEaseButtons)
             return
@@ -1343,5 +1451,5 @@ timerStopped = false;
 RUN_STATE_MUTATION = """
 anki.mutateNextCardStates('{key}', async (states, customData, ctx) => {{
     {js}
-    }}).finally(() => bridgeCommand('statesMutated'));
+    }}).finally(() => bridgeCommand('statesMutated:{key}'));
 """

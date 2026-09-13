@@ -64,6 +64,9 @@ class EditCurrent(QMainWindow):
             self.editor.set_note(note)
 
     def cleanup(self) -> None:
+        if getattr(self, "_cleanup_done", False):
+            return
+        self._cleanup_done = True
         gui_hooks.operation_did_execute.remove(self.on_operation_did_execute)
         self.editor.cleanup()
         saveGeom(self, "editcurrent")
@@ -71,10 +74,18 @@ class EditCurrent(QMainWindow):
 
     def reopen(self, mw: aqt.AnkiQt) -> None:
         if card := self.mw.reviewer.card:
-            self.editor.card = card
-            self.editor.set_note(card.note())
+
+            def load_target() -> None:
+                self.editor.card = card
+                self.editor.set_note(card.note())
+
+            self.editor.call_after_note_saved(load_target)
 
     def closeEvent(self, evt: QCloseEvent | None) -> None:
+        if getattr(self, "_cleanup_done", False):
+            if evt:
+                evt.accept()
+            return
         self.editor.call_after_note_saved(self.cleanup)
 
     def _saveAndClose(self) -> None:

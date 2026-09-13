@@ -31,6 +31,25 @@ use crate::search::SortMode;
 use crate::stats::studied_today;
 
 impl crate::services::SchedulerService for Collection {
+    fn get_review_card(
+        &mut self,
+        input: scheduler::ReviewCardRequest,
+    ) -> Result<scheduler::ReviewCardResponse> {
+        self.review_session_card(input)
+    }
+
+    fn answer_review_card(
+        &mut self,
+        input: scheduler::ReviewCardAnswer,
+    ) -> Result<anki_proto::collection::OpChanges> {
+        self.answer_review_session(input).map(Into::into)
+    }
+
+    fn release_review_card(&mut self, input: generic::String) -> Result<()> {
+        self.state.review_sessions.remove(&input.val);
+        self.clear_study_queues();
+        Ok(())
+    }
     /// This behaves like _updateCutoff() in older code - it also unburies at
     /// the start of a new day.
     fn sched_timing_today(&mut self) -> Result<scheduler::SchedTimingTodayResponse> {

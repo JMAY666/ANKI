@@ -6,6 +6,23 @@ mod release
 default:
     @just --list
 
+dual-review-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/tests/test_dual_review_api.py scripts/dual_review_package_check.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/tests/test_dual_review_api.py scripts/dual_review_package_check.py qt/aqt/builtin_features/desktop_tools/__init__.py qt/aqt/toolbar.py qt/tests/test_toolbar.py
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/builtin_features/dual_review.py qt/aqt/reviewer.py qt/aqt/review_shortcuts.py qt/aqt/mediasrv.py qt/tests/test_review_shortcuts.py scripts/dual_review_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/builtin_features/dual_review.py qt/aqt/reviewer.py qt/aqt/review_shortcuts.py qt/aqt/mediasrv.py qt/aqt/main.py qt/aqt/editcurrent.py qt/aqt/editcurrent_legacy.py qt/aqt/builtin_features/learning/workspace.py qt/aqt/builtin_features/learning/review_layout.py qt/aqt/builtin_features/review_tools/feedback.py qt/aqt/builtin_features/review_tools/config.py qt/aqt/builtin_features/passfail2/__init__.py qt/tests/test_experience.py qt/tests/test_review_shortcuts.py scripts/dual_review_smoke.py
+    {{ ninja }} format:rust
+
+dual-review-smoke run_name:
+    $env:QT_QPA_PLATFORM="offscreen"; & "out/pyenv/Scripts/python.exe" scripts/dual_review_smoke.py {{run_name}}
+
+dual-review-test:
+    {{ ninja }} check:rust_test
+    $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_dual_review_api.py qt/tests/test_review_shortcuts.py qt/tests/test_review_layout.py qt/tests/test_experience.py qt/tests/test_toolbar.py
+
+dual-review-package-check run_name:
+    & "out/pyenv/Scripts/python.exe" scripts/dual_review_package_check.py {{run_name}}
+
 deck-workspace-format:
     & "out/pyenv/Scripts/ruff.exe" check --select I --fix scripts/deck_workspace_smoke.py qt/aqt/builtin_features/learning/deck_page.py
     & "out/pyenv/Scripts/ruff.exe" format scripts/deck_workspace_smoke.py qt/aqt/builtin_features/learning/deck_page.py

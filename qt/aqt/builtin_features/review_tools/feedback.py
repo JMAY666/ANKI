@@ -39,6 +39,8 @@ class Feedback(QObject):
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.label.hide)
         self.positions: dict[str, list[float]] = {}
+        self.positions_by_web: dict[Any, dict] = {}
+        self.target_web = owner.mw.bottomWeb
         self.ease = 1
         owner.mw.installEventFilter(self)
 
@@ -49,11 +51,13 @@ class Feedback(QObject):
         return False
 
     def capture_buttons(self, card: Any) -> None:
+        web = self.owner.mw.reviewer.bottom.web
+
         def received(value: Any) -> None:
             if isinstance(value, dict):
-                self.positions = value
+                self.positions_by_web[web] = value
 
-        self.owner.mw.bottomWeb.evalWithCallback(
+        web.evalWithCallback(
             "Object.fromEntries([...document.querySelectorAll('button[data-ease]')].map(b=>{let r=b.getBoundingClientRect();return [b.dataset.ease,[r.x,r.y,r.width,r.height]]}))",
             received,
         )
@@ -86,10 +90,10 @@ class Feedback(QObject):
                 y += mw.height() - self.label.height()
             else:
                 pos = self.positions.get(
-                    str(self.ease), [mw.bottomWeb.width() / 2 - 50, 0, 100, 36]
+                    str(self.ease), [self.target_web.width() / 2 - 50, 0, 100, 36]
                 )
                 self.label.resize(max(60, int(pos[2])), max(30, int(pos[3])))
-                point = mw.bottomWeb.mapTo(mw, QPoint(int(pos[0]), int(pos[1])))
+                point = self.target_web.mapTo(mw, QPoint(int(pos[0]), int(pos[1])))
                 x, y = point.x(), point.y()
             x += offset[0]
             y += offset[1]
@@ -123,6 +127,8 @@ class Feedback(QObject):
         )
 
     def show_grade(self, ease: int) -> None:
+        self.target_web = self.owner.mw.reviewer.bottom.web
+        self.positions = self.positions_by_web.get(self.target_web, {})
         mode = get_config("policy")["feedback"]
         if mode == "off" or not review_is_visible():
             self.hide()

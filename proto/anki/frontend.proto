@@ -64,6 +64,8 @@ service FrontendService {
 
   // CSV import
   rpc ImportDialogRequireClose(generic.Empty) returns (generic.Empty);
+  rpc GetReviewSchedulingStatesWithContext(generic.String)
+      returns (SchedulingStatesWithContext);
 }
 
 service BackendFrontendService {}

@@ -64,6 +64,9 @@ service SchedulerService {
   // The number of days the calculated interval was fuzzed by on the previous
   // review (if any). Utilized by the FSRS add-on.
   rpc FuzzDelta(FuzzDeltaRequest) returns (FuzzDeltaResponse);
+  rpc GetReviewCard(ReviewCardRequest) returns (ReviewCardResponse);
+  rpc AnswerReviewCard(ReviewCardAnswer) returns (collection.OpChanges);
+  rpc ReleaseReviewCard(generic.String) returns (generic.Empty);
 }
 
 // Implicitly includes any of the above methods that are not listed in the
@@ -153,6 +156,26 @@ message QueuedCards {
 message GetQueuedCardsRequest {
   uint32 fetch_limit = 1;
   bool intraday_learning_only = 2;
+}
+
+// Transient window sessions. These never create cards or another collection.
+message ReviewCardRequest {
+  string session_id = 1;
+  int64 deck_id = 2;
+  int64 keep_card_id = 3;
+  bool validate_only = 4;
+}
+
+message ReviewCardResponse {
+  QueuedCards queued_cards = 1;
+  uint64 token = 2;
+  bool stale = 3;
+}
+
+message ReviewCardAnswer {
+  string session_id = 1;
+  uint64 token = 2;
+  CardAnswer answer = 3;
 }
 
 message SchedTimingTodayResponse {

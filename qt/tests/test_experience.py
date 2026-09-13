@@ -16,6 +16,7 @@ def pending_reviewer():
     reviewer.web = Mock()
     reviewer.web.isVisible.return_value = True
     reviewer.mw = SimpleNamespace(state="review", bottomWeb=Mock())
+    reviewer.bottom = SimpleNamespace(web=reviewer.mw.bottomWeb)
     reviewer.mw.bottomWeb.review_controls_active.return_value = True
     reviewer._audio_revision = 7
     reviewer._pending_visible_audio = (7, reviewer.card, "question", ["sound"])
@@ -33,6 +34,15 @@ def test_audio_starts_once_only_after_matching_visible_acknowledgment():
         reviewer._play_visible_audio("7")
         player.play_tags.assert_called_once_with(["sound"])
         reviewer._auto_advance_to_answer_if_enabled.assert_called_once()
+
+
+def test_activating_a_pane_waits_for_its_visible_acknowledgment():
+    reviewer = pending_reviewer()
+    with patch("aqt.reviewer.av_player") as player:
+        reviewer._play_visible_audio("7", acknowledged=False)
+        player.play_tags.assert_not_called()
+        reviewer._play_visible_audio("7")
+        player.play_tags.assert_called_once_with(["sound"])
 
 
 @pytest.mark.parametrize("change", ["card", "side", "page", "hidden", "controls"])

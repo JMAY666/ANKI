@@ -8,6 +8,7 @@ pub(crate) mod sized_chain;
 mod sorting;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 
 use intersperser::Intersperser;
@@ -104,6 +105,7 @@ pub(super) struct QueueSortOptions {
 
 #[derive(Debug)]
 pub(super) struct QueueBuilder {
+    pub(super) reserved: HashSet<CardId>,
     pub(super) new: Vec<NewCard>,
     pub(super) review: Vec<DueCard>,
     pub(super) learning: Vec<DueCard>,
@@ -166,6 +168,7 @@ impl QueueBuilder {
             .transpose()?;
 
         Ok(QueueBuilder {
+            reserved: HashSet::new(),
             new: Vec::new(),
             review: Vec::new(),
             learning: Vec::new(),
@@ -286,7 +289,51 @@ fn sort_learning(learning: Vec<DueCard>) -> VecDeque<LearningQueueEntry> {
 
 impl Collection {
     pub(crate) fn build_queues(&mut self, deck_id: DeckId) -> Result<CardQueues> {
+        self.build_queues_with_reservations(deck_id, &[])
+    }
+
+    pub(crate) fn build_queues_with_reservations(
+        &mut self,
+        deck_id: DeckId,
+        reserved: &[Card],
+    ) -> Result<CardQueues> {
         let mut queues = QueueBuilder::new(self, deck_id)?;
+        for card in reserved {
+            queues.reserved.insert(card.id);
+            let mode = queues.context.bury_mode(card.original_or_current_deck_id());
+            queues
+                .context
+                .seen_note_ids
+                .entry(card.note_id)
+                .and_modify(|seen| {
+                    seen.bury_new |= mode.bury_new;
+                    seen.bury_reviews |= mode.bury_reviews;
+                    seen.bury_interday_learning |= mode.bury_interday_learning;
+                })
+                .or_insert(mode);
+            let kind = match card.queue {
+                crate::card::CardQueue::New => Some(crate::decks::limits::LimitKind::New),
+                crate::card::CardQueue::Review | crate::card::CardQueue::DayLearn => {
+                    Some(crate::decks::limits::LimitKind::Review)
+                }
+                _ => None,
+            };
+            if let Some(kind) = kind {
+                let deck = self
+                    .storage
+                    .get_deck(card.deck_id)?
+                    .or_not_found(card.deck_id)?;
+                let mut parents = self.storage.parent_decks(&deck)?;
+                parents.push(deck);
+                parents.sort_by_key(|deck| std::cmp::Reverse(deck.name.components().count()));
+                if let Some(deck) = parents
+                    .iter()
+                    .find(|deck| queues.limits.contains_deck(deck.id))
+                {
+                    queues.limits.reserve_card(deck.id, kind)?;
+                }
+            }
+        }
         self.storage
             .update_active_decks(&queues.context.root_deck)?;
 

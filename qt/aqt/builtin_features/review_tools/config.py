@@ -230,5 +230,5 @@ def review_is_visible() -> bool:
     from aqt import mw
 
     return bool(
-        mw and mw.col and mw.state == "review" and mw.bottomWeb.review_controls_active()
+        mw and mw.col and mw.state == "review" and mw.reviewer.controls_active()
     )

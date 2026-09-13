@@ -1358,7 +1358,10 @@ title="{}" {}>{}</button>""".format(
 
     def onEditCurrent(self) -> None:
         experimental = self.col.experiment_enabled(ExperimentFlag.SVELTE_EDITOR)
-        self._open_new_or_legacy_dialog("EditCurrent", experimental)
+        editor = self._open_new_or_legacy_dialog("EditCurrent", experimental)
+        owner = getattr(self, "dual_review", None)
+        if owner and owner.managed and owner.active:
+            editor.editor._dual_review_origin = owner.active.index
 
     def onOverview(self) -> None:
         self.moveToState("overview")

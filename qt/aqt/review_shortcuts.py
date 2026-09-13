@@ -81,7 +81,7 @@ class ReviewShortcutGuard(QObject):
         control = getattr(self.mw, "passfail2", None)
         return (
             self.generation,
-            self.mw.bottomWeb._page_epoch,
+            self.reviewer.bottom.web._page_epoch,
             card.id if card else None,
             self.reviewer.state,
             bool(control and control.value["enabled"]),
@@ -115,7 +115,12 @@ class ReviewShortcutGuard(QObject):
         focus = self.mw.app.focusWidget()
         return bool(
             self.mw.state == "review"
-            and self.mw.bottomWeb.review_controls_active()
+            and self.reviewer.controls_active()
+            and (
+                not (owner := getattr(self.mw, "dual_review", None))
+                or not owner.managed
+                or owner.active.reviewer is self.reviewer
+            )
             and self.reviewer.card
             and self.reviewer.state in ("question", "answer")
             and QApplication.activeWindow() is self.mw
@@ -132,7 +137,7 @@ class ReviewShortcutGuard(QObject):
             return
         focus = self.mw.app.focusWidget()
         web = self.focus_web(focus)
-        if web is not None and web not in (self.reviewer.web, self.mw.bottomWeb):
+        if web is not None and web not in (self.reviewer.web, self.reviewer.bottom.web):
             return
         ticket = self.pending = object()
         snapshot = self.snapshot()
@@ -165,6 +170,16 @@ class ReviewShortcutGuard(QObject):
         if not isinstance(event, QKeyEvent) or self.mw.state != "review":
             return False
         focus = self.mw.app.focusWidget()
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.managed and event.type() == QEvent.Type.ShortcutOverride:
+            web = self.focus_web(focus)
+            if web in (self.reviewer.web, self.reviewer.bottom.web):
+                sequence = QKeySequence(event.keyCombination()).toString()
+                if sequence in owner.web_keys:
+                    # Deliver to the actual DOM first. Editable fields retain
+                    # text input; the guarded JS bridge routes review actions.
+                    event.accept()
+                    return True
         if (
             event.type() == QEvent.Type.ShortcutOverride
             and focus is not None

@@ -33,7 +33,12 @@ def guard():
     )
     window.passfail2 = SimpleNamespace(value={"enabled": False})
     reviewer = SimpleNamespace(
-        mw=window, card=SimpleNamespace(id=1), state="question", web=Mock()
+        mw=window,
+        card=SimpleNamespace(id=1),
+        state="question",
+        web=Mock(),
+        bottom=SimpleNamespace(web=window.bottomWeb),
+        controls_active=lambda: True,
     )
     value = ReviewShortcutGuard(reviewer)
     reviewer.shortcuts = value

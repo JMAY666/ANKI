@@ -24,6 +24,9 @@ impl QueueBuilder {
         col.storage.for_each_intraday_card_in_active_decks(
             self.context.timing.next_day_at,
             |card| {
+                if self.reserved.contains(&card.id) {
+                    return;
+                }
                 self.get_and_update_bury_mode_for_note(card.into());
                 self.learning.push(card);
             },
@@ -134,6 +137,9 @@ impl QueueBuilder {
 
     /// True if limit should be decremented.
     fn add_due_card(&mut self, card: DueCard) -> bool {
+        if self.reserved.contains(&card.id) {
+            return false;
+        }
         let bury_this_card = self
             .get_and_update_bury_mode_for_note(card.into())
             .map(|mode| match card.kind {
@@ -155,6 +161,9 @@ impl QueueBuilder {
 
     // True if limit should be decremented.
     fn add_new_card(&mut self, card: NewCard) -> bool {
+        if self.reserved.contains(&card.id) {
+            return false;
+        }
         let bury_this_card = self
             .get_and_update_bury_mode_for_note(card.into())
             .map(|mode| mode.bury_new)

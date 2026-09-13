@@ -373,6 +373,10 @@ class LearningWorkspace(QWidget):
         self.graph_web.load_url(QUrl("about:blank"))
 
     def save_review_layout(self, value: dict[str, float]) -> None:
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.enabled:
+            owner.save_card_size("left", value)
+            return
         self.mw.pm.profile[LAYOUT_KEY] = value
         self.mw.pm.save()
 
@@ -466,6 +470,10 @@ class LearningWorkspace(QWidget):
     def show_review(self) -> None:
         if self.mw.state != "review":
             return
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.managed:
+            owner.show_review()
+            return
         self.header.hide()
         self.native.viewport.set_reviewing(True)
         self.review_bar.setVisible(self.review_toolbar_visible())
@@ -492,6 +500,10 @@ class LearningWorkspace(QWidget):
 
     def review_visibility(self, visible: bool) -> None:
         if self.mw.state != "review":
+            return
+        owner = getattr(self.mw, "dual_review", None)
+        if owner and owner.managed:
+            owner.visibility(visible)
             return
         self.mw.reviewer.shortcuts.invalidate()
         self.mw.bottomWeb.set_review_page_visible(visible)

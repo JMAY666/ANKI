@@ -359,6 +359,22 @@ impl LimitTreeMap {
         self.get_root_limits().get(kind) == 0
     }
 
+    pub(crate) fn contains_deck(&self, deck_id: DeckId) -> bool {
+        self.map.contains_key(&deck_id)
+    }
+
+    pub(crate) fn reserve_card(&mut self, deck_id: DeckId, kind: LimitKind) -> Result<()> {
+        let consumes_review =
+            matches!(kind, LimitKind::New) && self.get_deck_limits(deck_id)?.cap_new_to_review;
+        self.decrement_deck_and_parent_limits(deck_id, kind)?;
+        // Unlike ordinary gathering, reservations happen before review cards
+        // are gathered. A held new card must reserve its shared review budget.
+        if consumes_review {
+            self.decrement_deck_and_parent_limits(deck_id, LimitKind::Review)?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn limit_reached(&self, deck_id: DeckId, kind: LimitKind) -> Result<bool> {
         Ok(self.get_deck_limits(deck_id)?.get(kind) == 0)
     }

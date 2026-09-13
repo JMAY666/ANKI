@@ -130,6 +130,8 @@ pub struct CollectionState {
     pub(crate) deck_cache: HashMap<DeckId, Arc<Deck>>,
     pub(crate) scheduler_info: Option<SchedulerInfo>,
     pub(crate) card_queues: Option<CardQueues>,
+    pub(crate) review_sessions: HashMap<String, crate::scheduler::queue::session::ReviewSession>,
+    pub(crate) review_token: u64,
     pub(crate) active_browser_columns: Option<Arc<Vec<browser_table::Column>>>,
     /// True if legacy Python code has executed SQL that has modified the
     /// database, requiring modification time to be bumped.

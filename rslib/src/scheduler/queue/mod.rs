@@ -5,6 +5,7 @@ mod builder;
 mod entry;
 mod learning;
 mod main;
+pub(crate) mod session;
 pub(crate) mod undo;
 
 use std::collections::VecDeque;
@@ -64,7 +65,7 @@ pub struct QueuedCard {
     pub context: SchedulingContext,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct QueuedCards {
     pub cards: Vec<QueuedCard>,
     pub new_count: usize,
@@ -209,6 +210,23 @@ impl Collection {
     }
 
     pub(crate) fn maybe_clear_study_queues_after_op(&mut self, op: &OpChanges) {
+        if op.changes.config
+            || op.changes.deck_config
+            || op.changes.notetype
+            || matches!(
+                op.op,
+                Op::UpdateDeck
+                    | Op::RemoveDeck
+                    | Op::ReparentDeck
+                    | Op::BuildFilteredDeck
+                    | Op::RebuildFilteredDeck
+                    | Op::EmptyFilteredDeck
+            )
+        {
+            for session in self.state.review_sessions.values_mut() {
+                session.invalidated = true;
+            }
+        }
         if op.op != Op::AnswerCard && op.requires_study_queue_rebuild() {
             self.state.card_queues = None;
         }
