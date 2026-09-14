@@ -96,3 +96,32 @@ def test_reset_and_leaving_review_restore_the_unrestricted_viewport(
     QTest.mouseDClick(viewport.handles["bottom"], Qt.MouseButton.LeftButton)
     assert saved == [{"width": 1.0, "height": 1.0}]
     assert viewport.ratios == (1.0, 1.0)
+
+
+def test_previous_button_does_not_reduce_card_resize_range(review_layout) -> None:
+    app, layout, saved = review_layout
+    layout.set_reviewing(True)
+    viewport = layout.viewport
+    for width in (520, 1000, 1400):
+        layout.resize(width, 700)
+        viewport.reset_layout()
+        app.processEvents()
+        assert viewport.width() == layout.width()
+        assert viewport.web.width() == layout.width() - 16
+        assert layout.previous_button.isVisible()
+        assert not layout.previous_button.geometry().intersects(
+            viewport.handles["left"].geometry()
+        )
+        viewport.resize_card(viewport.width() - 64, viewport.web.height())
+        app.processEvents()
+        assert not layout.previous_button.geometry().intersects(
+            viewport.handles["left"].geometry()
+        )
+        viewport.resize_card(400, 250)
+        app.processEvents()
+        assert viewport.web.width() == 400
+        assert viewport.web.height() == 250
+    layout.set_reviewing(False)
+    app.processEvents()
+    assert layout.previous_button.isHidden()
+    assert viewport.web.geometry() == viewport.rect()

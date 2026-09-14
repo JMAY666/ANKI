@@ -191,11 +191,12 @@ try:
     before = schedule()
     native = mw.learning_workspace.native
     check(
-        "previous control is left of the card and vertically centered",
-        native.previous_button.geometry().right() < native.viewport.geometry().left()
+        "floating previous control preserves full card width and is vertically centered",
+        native.viewport.width() == native.width()
+        and native.viewport.web.width() == native.width() - 16
         and abs(
             native.previous_button.geometry().center().y()
-            - native.viewport.geometry().center().y()
+            - native.viewport.web.geometry().center().y()
         )
         <= 1,
     )
