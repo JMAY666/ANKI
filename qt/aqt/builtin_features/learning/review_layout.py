@@ -10,12 +10,14 @@ from collections.abc import Callable
 from typing import Any
 
 from aqt.qt import (
+    QHBoxLayout,
     QKeyEvent,
     QMouseEvent,
     QPainter,
     QPaintEvent,
     QPalette,
     QPoint,
+    QPushButton,
     QResizeEvent,
     Qt,
     QVBoxLayout,
@@ -218,9 +220,42 @@ class ReviewLayout(QWidget):
     ) -> None:
         super().__init__()
         self.viewport = CardViewport(web, save)
+        self.previous_button = QPushButton("← 上一张卡片")
+        self.previous_button.setObjectName("previousCardSide")
+        self.previous_button.setFixedWidth(32)
+        self.previous_button.setAccessibleName("上一张卡片")
+        self.previous_button.setStyleSheet("padding: 5px 2px;")
+        self.previous_button.setEnabled(False)
+        self.previous_action: Callable[[], None] = lambda: None
+        self.previous_button.clicked.connect(self._previous_clicked)
+        row = QHBoxLayout()
+        row.setContentsMargins(8, 0, 8, 0)
+        row.setSpacing(8)
+        row.addWidget(self.previous_button)
+        row.addWidget(self.viewport, 1)
+        self.navigation_balance = QWidget()
+        self.navigation_balance.setFixedWidth(32)
+        row.addWidget(self.navigation_balance)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self.viewport, 1)
+        layout.addLayout(row, 1)
         # The action bar always keeps its intrinsic height and full available width.
         layout.addWidget(bottom)
+        self.set_reviewing(False)
+
+    def set_reviewing(self, reviewing: bool) -> None:
+        self.previous_button.setVisible(reviewing)
+        self.navigation_balance.setVisible(reviewing)
+        self.viewport.set_reviewing(reviewing)
+
+    def _previous_clicked(self) -> None:
+        self.previous_button.setEnabled(False)
+        self.previous_action()
+
+    def resizeEvent(self, event: QResizeEvent | None) -> None:
+        super().resizeEvent(event)
+        compact = self.width() < 800
+        self.previous_button.setText("←" if compact else "← 上一张卡片")
+        self.previous_button.setFixedWidth(32 if compact else 108)
+        self.navigation_balance.setFixedWidth(32 if compact else 108)

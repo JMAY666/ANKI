@@ -87,6 +87,14 @@ def previous(reviewer, card_id, double=False):
             "document.getElementById('previous-card')?.disabled === false",
         )
     )
+    if reviewer.web is mw.web:
+        button = mw.learning_workspace.native.previous_button
+        wait(lambda: button.isEnabled())
+        button.click()
+        if double:
+            button.click()
+        wait(lambda: ready(reviewer, card_id))
+        return
     js(
         reviewer.bottom.web,
         "{ const button=document.getElementById('previous-card');"
@@ -181,6 +189,26 @@ try:
     reviewer = mw.reviewer
     wait(lambda: ready(reviewer))
     before = schedule()
+    native = mw.learning_workspace.native
+    check(
+        "previous control is left of the card and vertically centered",
+        native.previous_button.geometry().right() < native.viewport.geometry().left()
+        and abs(
+            native.previous_button.geometry().center().y()
+            - native.viewport.geometry().center().y()
+        )
+        <= 1,
+    )
+    reviewer._showAnswer()
+    wait(lambda: js(reviewer.bottom.web, "!!document.getElementById('defease')"))
+    check(
+        "rating group is centered in the review area",
+        js(
+            reviewer.bottom.web,
+            "{const r=document.getElementById('middle').getBoundingClientRect(); Math.abs((r.left+r.right)/2-innerWidth/2)<2}",
+        ),
+    )
+    mw.grab().save(str(BASE / "side-layout.png"))
     check(
         "first card has a disabled previous button",
         js(reviewer.bottom.web, "document.getElementById('previous-card').disabled"),
@@ -290,10 +318,8 @@ try:
     )
     check(
         "previous button remains visible in a narrow window",
-        js(
-            mw.reviewer.bottom.web,
-            "{const b=document.getElementById('previous-card').getBoundingClientRect(); b.width>0 && b.left>=0 && b.right<=innerWidth}",
-        ),
+        native.previous_button.isVisible()
+        and native.viewport.geometry().right() <= native.width(),
     )
     mw.grab().save(str(BASE / "narrow.png"))
     owner.stop()

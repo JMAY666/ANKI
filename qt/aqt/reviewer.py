@@ -1014,6 +1014,7 @@ class Reviewer:
 
     def _previous_card_button(self) -> str:
         step = self._previous_card_step()
+        side = self._sync_previous_side_button(step)
         label = escape(
             re.sub(r"\(&.\)", "", tr.qt_accel_previous_card()).replace("&", "")
         )
@@ -1026,15 +1027,27 @@ class Reviewer:
         disabled = "disabled" if step is None else ""
         return (
             f'<button id="previous-card" title="{hint}" {disabled} '
+            f"{'hidden' if side else ''} "
             f'data-undo-step="{step or ""}" '
             "onclick=\"this.disabled=true;pycmd('reviewPrevious:'+this.dataset.undoStep);\">"
             f"← {label}</button>"
         )
 
+    def _sync_previous_side_button(self, step: int | None) -> bool:
+        workspace = getattr(self.mw, "learning_workspace", None)
+        if workspace is None or self.web is not self.mw.web:
+            return False
+        native = workspace.native
+        native.previous_button.setEnabled(step is not None)
+        native.previous_button.setToolTip("撤销最近一次评分并返回上一张卡片（Ctrl+Z）")
+        native.previous_action = lambda: self._undo_previous_card(str(step or ""))
+        return True
+
     def _update_previous_card_button(self, _info: UndoActionsInfo) -> None:
         if self.mw.state != "review":
             return
         step = self._previous_card_step()
+        self._sync_previous_side_button(step)
         self.bottom.web.eval(
             "{ const button = document.getElementById('previous-card');"
             "if (button) {"

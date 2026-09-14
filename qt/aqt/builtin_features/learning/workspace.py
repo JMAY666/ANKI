@@ -368,7 +368,7 @@ class LearningWorkspace(QWidget):
         self.paused_auto_advance = None
         self.header.hide()
         self.review_bar.hide()
-        self.native.viewport.set_reviewing(False)
+        self.native.set_reviewing(False)
         self.pages.setCurrentWidget(self.native)
         self.graph_web.load_url(QUrl("about:blank"))
 
@@ -475,7 +475,7 @@ class LearningWorkspace(QWidget):
             owner.show_review()
             return
         self.header.hide()
-        self.native.viewport.set_reviewing(True)
+        self.native.set_reviewing(True)
         self.review_bar.setVisible(self.review_toolbar_visible())
         self.review_label.setText("复习 · " + self.mw.col.decks.current()["name"])
         self.pages.setCurrentWidget(self.native)
@@ -560,7 +560,7 @@ class LearningWorkspace(QWidget):
         elif new in ("deckBrowser", "overview", "resetRequired", "profileManager"):
             self.header.hide()
             self.review_bar.hide()
-            self.native.viewport.set_reviewing(False)
+            self.native.set_reviewing(False)
             self.pages.setCurrentWidget(self.native)
             if new == "overview" and old == "review" and not self.legacy_navigation:
                 QTimer.singleShot(
