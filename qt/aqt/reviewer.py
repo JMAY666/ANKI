@@ -10,6 +10,7 @@ from collections.abc import Callable, Generator, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import partial, wraps
+from html import escape
 from typing import Any, Literal, Match, TypeVar, Union, cast
 
 import aqt
@@ -51,6 +52,7 @@ from aqt.qt import *
 from aqt.sound import av_player, play_clicked_audio, record_audio
 from aqt.theme import theme_manager
 from aqt.toolbar import BottomBar
+from aqt.undo import UndoActionsInfo
 from aqt.utils import (
     askUserDialog,
     downArrow,
@@ -199,6 +201,7 @@ class Reviewer:
         self.shortcuts = ReviewShortcutGuard(self)
         self._pending_typed_answer: object | None = None
         gui_hooks.av_player_did_end_playing.append(self._on_av_player_did_end_playing)
+        gui_hooks.undo_state_did_change.append(self._update_previous_card_button)
 
     def review_panel(self):
         owner = getattr(self.mw, "dual_review", None)
@@ -830,6 +833,9 @@ class Reviewer:
         if url == "reviewShortcut:show":
             self.shortcuts.run(self.onEnterKey)
             return
+        if url.startswith("reviewPrevious:"):
+            self._undo_previous_card(url.removeprefix("reviewPrevious:"))
+            return
         if command(self, url):
             return
         if (
@@ -999,6 +1005,61 @@ class Reviewer:
     # Bottom bar
     ##########################################################################
 
+    def _previous_card_step(self) -> int | None:
+        if self.mw.col:
+            status = self.mw.col.undo_status()
+            if status.undo == tr.actions_answer_card() and status.last_step:
+                return status.last_step
+        return None
+
+    def _previous_card_button(self) -> str:
+        step = self._previous_card_step()
+        label = escape(
+            re.sub(r"\(&.\)", "", tr.qt_accel_previous_card()).replace("&", "")
+        )
+        key = QKeySequence(QKeySequence.StandardKey.Undo).toString(
+            QKeySequence.SequenceFormat.NativeText
+        )
+        hint = escape(
+            tr.undo_undo_action(val=tr.actions_answer_card()) + f" ({key})", quote=True
+        )
+        disabled = "disabled" if step is None else ""
+        return (
+            f'<button id="previous-card" title="{hint}" {disabled} '
+            f'data-undo-step="{step or ""}" '
+            "onclick=\"this.disabled=true;pycmd('reviewPrevious:'+this.dataset.undoStep);\">"
+            f"← {label}</button>"
+        )
+
+    def _update_previous_card_button(self, _info: UndoActionsInfo) -> None:
+        if self.mw.state != "review":
+            return
+        step = self._previous_card_step()
+        self.bottom.web.eval(
+            "{ const button = document.getElementById('previous-card');"
+            "if (button) {"
+            f"button.disabled = {json.dumps(step is None)};"
+            f"button.dataset.undoStep = {json.dumps(str(step or ''))};"
+            "} }"
+        )
+
+    def _undo_previous_card(self, step: str) -> None:
+        # Bind the click to the operation shown on the button. A late/double
+        # click must not undo another rating, an edit, or an operation in flight.
+        if (
+            self.mw.state != "review"
+            or self.state not in ("question", "answer")
+            or not self.controls_active()
+            or self.mw._background_op_count
+            or not step.isdecimal()
+            or int(step) != self._previous_card_step()
+        ):
+            return
+        self._cancel_pending_audio()
+        self.shortcuts.invalidate()
+        self._pending_typed_answer = None
+        self.mw.undo()
+
     def _bottomHTML(self) -> str:
         from aqt.builtin_features.review_tools import render
 
@@ -1009,6 +1070,7 @@ class Reviewer:
 <table id=innertable width=100%% cellspacing=0 cellpadding=0>
 <tr>
 <td align=start valign=top class=stat>
+%(previous)s
 <button title="%(editkey)s" onclick="pycmd('edit');">%(edit)s</button></td>
 <td align=center valign=top id=middle>
 </td>
@@ -1026,6 +1088,7 @@ time = %(time)d;
 timerStopped = false;
 </script>
 """ % dict(
+            previous=self._previous_card_button(),
             edit=tr.studying_edit(),
             editkey=tr.actions_shortcut_key(val="E"),
             more=tr.studying_more(),

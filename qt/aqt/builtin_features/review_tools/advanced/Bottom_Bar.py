@@ -268,7 +268,7 @@ def _bottomHTML(self):
 <table id=innertable width=100%% cellspacing=0 cellpadding=0 style="padding-top: {bottomBar_top_padding}px">
 <tr>
 <td align=start width=50 valign=top class=stat style="padding-top: 0">
-
+{self._previous_card_button()}
 <button title="快捷键： E" onclick="pycmd('edit');" {edit_style}>{edit_label}</button></td>
 {left_side1}
 {left_side2}

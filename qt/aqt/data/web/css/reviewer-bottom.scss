@@ -50,6 +50,11 @@ button {
     padding-top: 10px;
 }
 
+#previous-card:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
 @media (max-width: 583px) {
     // Keep Edit/More available in small windows, below the rating buttons.
     #innertable > tbody > tr {

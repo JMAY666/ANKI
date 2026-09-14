@@ -6,6 +6,17 @@ mod release
 default:
     @just --list
 
+review-undo-test:
+    $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_review_undo.py
+
+review-undo-smoke run_name:
+    $env:QT_QPA_PLATFORM="offscreen"; & "out/pyenv/Scripts/python.exe" scripts/review_undo_smoke.py {{run_name}}
+
+review-undo-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/reviewer.py qt/tests/test_review_undo.py scripts/review_undo_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/reviewer.py qt/tests/test_review_undo.py scripts/review_undo_smoke.py
+    & "node_modules/.bin/dprint.cmd" fmt README.md docs/REVIEW-UNDO.md
+
 dual-review-format:
     & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/tests/test_dual_review_api.py scripts/dual_review_package_check.py
     & "out/pyenv/Scripts/ruff.exe" format qt/tests/test_dual_review_api.py scripts/dual_review_package_check.py qt/aqt/builtin_features/desktop_tools/__init__.py qt/aqt/toolbar.py qt/tests/test_toolbar.py
