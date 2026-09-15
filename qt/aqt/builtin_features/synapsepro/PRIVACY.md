@@ -21,6 +21,14 @@ add-on with several optional online tools.
   text is included. Providers have their own privacy policies. Ollama and
   llama.cpp can be used locally. DeepSeek requests are sent directly to
   `https://api.deepseek.com/chat/completions` using the user's own API key.
+- **Image questions:** only images explicitly attached through the picker,
+  clipboard, or Anki-window region selector are sent, together with the question,
+  when Send is pressed. Recent image messages may be included in follow-up
+  requests. Image pixels are resized/re-encoded without imported metadata.
+  Attachments and image history are held in memory, never written to collection
+  media, settings, or chat logs; clearing chat or closing the profile releases
+  them. Saved default-provider/model preferences use the existing collection
+  configuration; API keys remain in the existing local secret store.
 - **SoundCloud:** loads SoundCloud's player, media, cookies, and artwork when
   SoundCloud mode is used.
 - **External links:** support, community, API-key, and download links open only

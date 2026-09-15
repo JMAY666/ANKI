@@ -19,6 +19,7 @@ import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from typing import Any, Callable, Dict, List, Optional
 
 # ── Local imports ─────────────────────────────────────────────────────────────
@@ -149,6 +150,7 @@ CK_OWN_PROMPT = _PFX + "own_prompt"
 CK_CHIPS      = _PFX + "chips_config"
 CK_FONT_SIZE  = _PFX + "font_size"
 CK_CARD_CONTEXT = _PFX + "card_context_enabled"
+CK_PROVIDER_MODELS = _PFX + "provider_models"
 
 _DEFAULT_CHIPS: Dict[str, Any] = {
     "builtin":   {"short": True, "concise": True, "detailed": True,
@@ -162,9 +164,15 @@ _dock:            Optional[Any] = None
 _webview:         Optional[Any] = None
 _profile:         Optional[Any] = None
 _hooks_connected: bool          = False
-_conversation:    List[Dict[str, str]] = []
+_conversation:    List[Dict[str, Any]] = []
 _dispatcher:      Optional[Any] = None   # set up in _setup_sidebar()
 _session_generation: int         = 0
+_request_busy = False
+_page_ready = False
+_queued_js: list[str] = []
+_attachments: dict[str, dict[str, Any]] = {}
+_draft_image_ids: list[str] = []
+_capture_dialog: Any = None
 
 
 # ── Cross-thread JS dispatcher (signal/slot, always marshals to main thread) ──
@@ -336,7 +344,11 @@ def _load_settings(provider: Optional[str] = None) -> Dict[str, Any]:
         effective_model = llama_model
         current_key     = _cfg_get(CK_KEY_LLAMA, "")
     else:
-        effective_model = _cfg_get(CK_MODEL, "")
+        models = _cfg_get(CK_PROVIDER_MODELS, {})
+        effective_model = models.get(provider, "") if isinstance(models, dict) else ""
+        # The old shared key belongs only to the currently selected provider.
+        if (not isinstance(models, dict) or provider not in models) and provider == _cfg_get(CK_PROVIDER, "openai"):
+            effective_model = _cfg_get(CK_MODEL, "")
     return {
         "provider":     provider,
         "model":        effective_model,
@@ -366,6 +378,13 @@ def _save_settings_dict(data: Dict[str, Any]) -> None:
     ollama_ep = data.get("ollamaEndpoint", OLLAMA_EP_DEFAULT).strip() or OLLAMA_EP_DEFAULT
     llama_ep  = data.get("llamaEndpoint", LLAMA_EP_DEFAULT).strip() or LLAMA_EP_DEFAULT
 
+    models = _cfg_get(CK_PROVIDER_MODELS, {})
+    models = dict(models) if isinstance(models, dict) else {}
+    old_provider = _cfg_get(CK_PROVIDER, "openai")
+    if old_provider not in models and old_provider in ("openai", "gemini", "openrouter", "anthropic"):
+        models[old_provider] = _cfg_get(CK_MODEL, "")
+    models[provider] = model
+    _cfg_set(CK_PROVIDER_MODELS, models)
     _cfg_set(CK_PROVIDER,   provider)
     _cfg_set(CK_LANGUAGE,   data.get("language",  "English"))
     _cfg_set(CK_SOURCE,     data.get("source",    "Front & Back"))
@@ -526,6 +545,13 @@ def _classify_error(exc: Exception, provider: str = "") -> str:
 # All providers use streaming (SSE / NDJSON) for the typewriter effect.
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _check_stream_error(event: dict[str, Any]) -> None:
+    error = event.get("error")
+    if error:
+        message = error.get("message", "AI stream failed") if isinstance(error, dict) else str(error)
+        raise RuntimeError(message)
+
+
 def _stream_openai_compat(
     url: str,
     api_key: str,
@@ -569,6 +595,7 @@ def _stream_openai_compat(
                 break
             try:
                 ev      = json.loads(data_str)
+                _check_stream_error(ev)
                 choices = ev.get("choices") or []
                 if choices:
                     delta   = choices[0].get("delta") or {}
@@ -581,7 +608,7 @@ def _stream_openai_compat(
                         rc = delta.get("reasoning_content") or delta.get("reasoning") or ""
                         if rc:
                             on_reasoning(rc)
-            except Exception:
+            except json.JSONDecodeError:
                 pass
 
 
@@ -593,6 +620,7 @@ def _stream_gemini(
 ) -> None:
     """Gemini streaming via SSE (alt=sse)."""
     print(f"AI Assistant: streaming Gemini, model={model}")
+    from .ai_images import gemini_parts
     contents: list = []
     system_parts: list = []
     for m in messages:
@@ -600,7 +628,7 @@ def _stream_gemini(
             system_parts.append({"text": m["content"]})
         else:
             role = "user" if m["role"] == "user" else "model"
-            contents.append({"role": role, "parts": [{"text": m["content"]}]})
+            contents.append({"role": role, "parts": gemini_parts(m["content"])})
     payload_dict: Dict[str, Any] = {"contents": contents}
     if system_parts:
         payload_dict["system_instruction"] = {"parts": system_parts}
@@ -621,6 +649,7 @@ def _stream_gemini(
             data_str = line[6:]
             try:
                 ev         = json.loads(data_str)
+                _check_stream_error(ev)
                 candidates = ev.get("candidates") or []
                 if candidates:
                     parts = (candidates[0].get("content") or {}).get("parts") or []
@@ -629,7 +658,7 @@ def _stream_gemini(
                         text = part.get("text") or ""
                         if text:
                             on_chunk(text)
-            except Exception:
+            except json.JSONDecodeError:
                 pass
 
 
@@ -642,7 +671,9 @@ def _stream_anthropic(
     """Anthropic streaming via SSE."""
     print(f"AI Assistant: streaming Anthropic, model={model}")
     system    = next((m["content"] for m in messages if m["role"] == "system"), None)
-    user_msgs = [m for m in messages if m["role"] != "system"]
+    from .ai_images import anthropic_content
+    user_msgs = [{"role": m["role"], "content": anthropic_content(m["content"])}
+                 for m in messages if m["role"] != "system"]
     payload_dict: Dict[str, Any] = {
         "model": model, "max_tokens": 2048, "messages": user_msgs, "stream": True,
     }
@@ -666,13 +697,14 @@ def _stream_anthropic(
             data_str = line[6:]
             try:
                 ev = json.loads(data_str)
+                _check_stream_error(ev)
                 if ev.get("type") == "content_block_delta":
                     text = (ev.get("delta") or {}).get("text") or ""
                     if text:
                         on_chunk(text)
                 elif ev.get("type") == "message_stop":
                     break
-            except Exception:
+            except json.JSONDecodeError:
                 pass
 
 
@@ -684,8 +716,9 @@ def _stream_ollama(
 ) -> None:
     """Ollama streaming via newline-delimited JSON."""
     print(f"AI Assistant: streaming Ollama, model={model}, endpoint={endpoint}")
+    from .ai_images import ollama_message
     payload = json.dumps({
-        "model": model, "messages": messages, "stream": True,
+        "model": model, "messages": [ollama_message(m) for m in messages], "stream": True,
     }).encode("utf-8")
     req = urllib.request.Request(
         f"{endpoint}/api/chat", data=payload,
@@ -698,12 +731,13 @@ def _stream_ollama(
                 continue
             try:
                 ev      = json.loads(line)
+                _check_stream_error(ev)
                 content = (ev.get("message") or {}).get("content") or ""
                 if content:
                     on_chunk(content)
                 if ev.get("done"):
                     break
-            except Exception:
+            except json.JSONDecodeError:
                 pass
 
 
@@ -770,11 +804,14 @@ def _normalize_model(model: str) -> str:
     return _LEGACY_MODELS.get((model or "").strip(), model)
 
 
-def _run_api_in_thread(settings: Dict[str, Any], messages: List[Dict]) -> None:
+def _run_api_in_thread(settings: Dict[str, Any], messages: List[Dict], image_ids: Optional[list[str]] = None) -> None:
     """Stream API response token by token; each chunk is dispatched to the webview."""
     request_generation = _session_generation
+    image_ids = image_ids or []
+    history_before = _conversation[:-1] if _conversation and _conversation[-1]["role"] == "user" else list(_conversation)
 
     def worker() -> None:
+        global _request_busy
         provider  = settings.get("provider", "?")
         model     = _normalize_model(settings.get("model", ""))
         api_key   = settings.get("apiKey", "")
@@ -785,6 +822,9 @@ def _run_api_in_thread(settings: Dict[str, Any], messages: List[Dict]) -> None:
         if not model:
             err = "No model selected. Please configure a model in Settings."
             _js_on_main(f"receiveResponse({json.dumps(err)}, true);", request_generation)
+            if request_generation == _session_generation:
+                _request_busy = False
+                _conversation[:] = history_before
             return
 
         def on_chunk(chunk: str) -> None:
@@ -853,10 +893,14 @@ def _run_api_in_thread(settings: Dict[str, Any], messages: List[Dict]) -> None:
                 return
             _conversation.append({"role": "assistant", "content": text})
             _trim_conversation()
+            _js_on_main(f"completeSend({json.dumps(image_ids)});", request_generation)
             _js_on_main("finalizeResponse();", request_generation)
             print(f"AI Assistant: streaming done [{provider}] ({len(text)} chars)")
 
         except Exception as exc:
+            if request_generation != _session_generation:
+                return
+            _conversation[:] = history_before
             err_msg = _classify_error(exc, provider)
             _EXPECTED = (urllib.error.HTTPError, urllib.error.URLError,
                          TimeoutError, socket.timeout, json.JSONDecodeError,
@@ -867,13 +911,13 @@ def _run_api_in_thread(settings: Dict[str, Any], messages: List[Dict]) -> None:
                 print(f"AI Assistant: unexpected error [{provider}]:")
                 traceback.print_exc()
 
-            if full_text:
-                # Partial response was streamed — finalize it, then show error below
-                _js_on_main("finalizeResponse();", request_generation)
-            else:
+            if not full_text:
                 # Nothing arrived yet — remove the empty bubble
                 _js_on_main("cancelStream();", request_generation)
             _js_on_main(f"receiveResponse({json.dumps(err_msg)}, true);", request_generation)
+        finally:
+            if request_generation == _session_generation:
+                _request_busy = False
 
     threading.Thread(target=worker, daemon=True).start()
 
@@ -887,9 +931,23 @@ def _trim_conversation() -> None:
     global _conversation
     system = [dict(_SYSTEM_MSG)]
     tail = _conversation[1:] if _conversation and _conversation[0].get("role") == "system" else _conversation
-    tail = tail[-24:]
-    while tail and sum(len(str(item.get("content", ""))) for item in tail) > 64000:
+    if len(tail) > 24:
+        tail = tail[-24:]
+        # Trimming before a new question can leave a dangling assistant reply.
+        # Providers that require the first turn to be user must still accept it.
+        while tail and tail[0]["role"] != "user":
+            tail.pop(0)
+    from .ai_images import image_parts
+    def size(kind):
+        return sum(len(part.get("text", "")) if kind == "text" else
+                   len(part.get("image_url", {}).get("url", ""))
+                   for item in tail for part in image_parts(item.get("content", "")))
+    # Retain the latest user/assistant pair. Images have their own byte budget;
+    # treating base64 as text would silently discard even a single screenshot.
+    while len(tail) > 2 and (size("text") > 64000 or size("images") > 12 * 1024 * 1024):
         tail.pop(0)
+        while tail and tail[0]["role"] != "user":
+            tail.pop(0)
     _conversation = system + tail
 
 _SYSTEM_MSG: Dict[str, str] = {
@@ -1092,8 +1150,10 @@ if _qt_ok and QWebEnginePage is not object:
                 try:
                     data = json.loads(data_str)
                 except json.JSONDecodeError as e:
-                    print(f"AI Assistant: PYCALL JSON parse error "
-                          f"(action='{action}'): {e} | raw='{data_str[:80]}'")
+                    print(f"AI Assistant: invalid bridge JSON (action='{action}'): {e}")
+                    return
+                if not isinstance(data, dict):
+                    return
                 print(f"AI Assistant: bridge received action='{action}'")
                 try:
                     _handle_action(action, data)
@@ -1134,6 +1194,11 @@ def _handle_action(action: str, data: Dict[str, Any]) -> None:
         "check_llama":   _action_check_llama,
         "clear_history": _action_clear_history,
         "open_url":      _action_open_url,
+        "choose_images": _action_choose_images,
+        "paste_image": _action_paste_image,
+        "capture_image": lambda _data: QTimer.singleShot(0, lambda: _capture_image(False)),
+        "remove_image": _action_remove_image,
+        "release_images": _action_release_images,
     }
     handler = dispatch.get(action)
     if handler:
@@ -1154,6 +1219,8 @@ def _action_provider_settings(data: Dict[str, Any]) -> None:
 def _action_page_ready(_data: Dict[str, Any]) -> None:
     """HTML page finished loading and is ready to receive init()."""
     print("AI Assistant: page_ready received – injecting init config")
+    global _page_ready
+    _page_ready = True
     _reset_conversation()
     _inject_init()
     # Apply the current review state now that the page's JS exists. Without this,
@@ -1161,13 +1228,29 @@ def _action_page_ready(_data: Dict[str, Any]) -> None:
     # disabled, because earlier setChipsEnabled() calls fired before the page was
     # ready (and were lost).
     _update_chips()
+    _sync_attachments()
+    for code in list(_queued_js):
+        _run_js(code)
+    _queued_js.clear()
 
 
 def _action_send_message(data: Dict[str, Any]) -> None:
-    text = (data.get("text") or "").strip()
-    if not text:
-        print("AI Assistant: send_message called with empty text")
+    global _request_busy
+    from .ai_images import MAX_IMAGES, message_content
+    if _request_busy:
         return
+    text = (data.get("text") or "").strip()
+    image_ids = data.get("images", [])
+    if (not isinstance(image_ids, list) or len(image_ids) > MAX_IMAGES
+            or any(not isinstance(key, str) or key not in _attachments for key in image_ids)
+            or len(set(image_ids)) != len(image_ids)):
+        _run_js(f"receiveResponse({json.dumps(_('Please add the image again.'))}, true);")
+        return
+    if not text and not image_ids:
+        _run_js("setBusy(false);")
+        return
+    text = text or _("Please explain this image.")
+    images = [_attachments[key] for key in image_ids]
 
     settings = _load_settings()
     provider = settings["provider"]
@@ -1179,6 +1262,12 @@ def _action_send_message(data: Dict[str, Any]) -> None:
     if not _is_configured(provider, api_key):
         print("AI Assistant: not configured – showing error")
         _run_js('receiveResponse("No API key configured. Open Settings (⚙) and enter your API key.", true);')
+        return
+    if not settings["model"]:
+        _run_js('receiveResponse("No model selected. Please configure a model in Settings.", true);')
+        return
+    if images and provider == "deepseek" and settings["model"] in ("deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"):
+        _run_js(f"receiveResponse({json.dumps(_('For images, select deepseek-flash or another vision model in Default AI.'))}, true);")
         return
 
     use_card_context = data.get("useCardContext") is True
@@ -1193,14 +1282,175 @@ def _action_send_message(data: Dict[str, Any]) -> None:
     # Keep only the user's real text in chat history.  The card context exists
     # solely in this request copy and is therefore neither shown in the WebView
     # nor accidentally reused after the reviewer moves to another card.
-    _conversation.append({"role": "user", "content": text})
+    _conversation.append({"role": "user", "content": message_content(text, images)})
+    _trim_conversation()
     request_messages = [dict(message) for message in _conversation]
     if card_content:
-        request_messages[-1]["content"] = _build_contextual_question(
-            text, card_content
-        )
+        request_messages[-1]["content"] = message_content(_build_contextual_question(text, card_content), images)
+    _request_busy = True
+    _run_js("messageAccepted();")
     _run_js("showTyping();")
-    _run_api_in_thread(settings, request_messages)
+    _run_api_in_thread(settings, request_messages, image_ids)
+
+
+def _sync_attachments() -> None:
+    if _page_ready:
+        items = [_attachments[key] for key in _draft_image_ids if key in _attachments]
+        _run_js(f"receiveAttachments({json.dumps(items)});")
+
+
+def _add_attachment(item: dict[str, Any], draft: bool = True) -> str:
+    from .ai_images import MAX_IMAGES
+    if (draft and len(_draft_image_ids) >= MAX_IMAGES) or len(_attachments) >= MAX_IMAGES * 2:
+        raise ValueError(_("Too many images. Remove an image or clear the chat first."))
+    key = uuid.uuid4().hex
+    _attachments[key] = {**item, "id": key}
+    if draft:
+        _draft_image_ids.append(key)
+    return key
+
+
+def _attachment_error(error: Exception) -> None:
+    _run_js(f"showAttachmentError({json.dumps(str(error))});")
+
+
+def _action_choose_images(_data: Dict[str, Any]) -> None:
+    if _request_busy:
+        return
+    from aqt.qt import QFileDialog
+    from .ai_images import MAX_IMAGES, read_image
+    generation = _session_generation
+    paths, _filter = QFileDialog.getOpenFileNames(
+        mw, _("Add images"), "", _("Images (*.jpg *.jpeg *.png *.webp)"),
+    )
+    if generation != _session_generation:
+        return
+    try:
+        if len(paths) + len(_draft_image_ids) > MAX_IMAGES:
+            raise ValueError(_("Too many images. Remove an image or clear the chat first."))
+        # Decode the batch before changing the draft so one invalid file does
+        # not leave the user with an unexpected partial selection.
+        items = [read_image(path) for path in paths]
+        if len(items) + len(_attachments) > MAX_IMAGES * 2:
+            raise ValueError(_("Too many images. Remove an image or clear the chat first."))
+        for item in items:
+            _add_attachment(item)
+        _sync_attachments()
+    except (ValueError, OSError) as exc:
+        _attachment_error(exc)
+
+
+def _action_paste_image(_data: Dict[str, Any]) -> None:
+    if _request_busy:
+        return
+    from aqt.qt import QApplication
+    from .ai_images import prepare_image
+    try:
+        _add_attachment(prepare_image(QApplication.clipboard().image(), "pasted.png"))
+        _sync_attachments()
+    except ValueError as exc:
+        _attachment_error(exc)
+
+
+def _action_remove_image(data: Dict[str, Any]) -> None:
+    if _request_busy:
+        return
+    key = data.get("id")
+    if isinstance(key, str) and key in _draft_image_ids:
+        _draft_image_ids.remove(key)
+        _attachments.pop(key, None)
+        _sync_attachments()
+
+
+def _action_release_images(data: Dict[str, Any]) -> None:
+    for key in data.get("images", []):
+        if isinstance(key, str):
+            _attachments.pop(key, None)
+            if key in _draft_image_ids:
+                _draft_image_ids.remove(key)
+    _sync_attachments()
+
+
+def show_ai_assistant() -> bool:
+    """Idempotently show the right-hand chat without toggling it closed."""
+    if not _setup_sidebar() or _dock is None:
+        return False
+    if _dock.isFloating():
+        _dock.setFloating(False)
+    mw.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, _dock)
+    _dock.show()
+    _dock.raise_()
+    _update_chips()
+    return True
+
+
+def _when_page_ready(code: str) -> None:
+    if _page_ready:
+        _run_js(code)
+    else:
+        _queued_js.append(code)
+
+
+def start_screenshot_question() -> None:
+    """Reviewer bottom-bar entry, shared by single and dual review."""
+    QTimer.singleShot(0, lambda: _capture_image(True))
+
+
+def _grab_anki_window():
+    # QWidget capture is scoped to Anki's widgets. QScreen.grabWindow() reads
+    # desktop pixels and can include an unrelated window covering Anki.
+    return mw.grab()
+
+
+def _capture_image(compose: bool) -> None:
+    global _capture_dialog
+    if not mw or _capture_dialog is not None:
+        return
+    if _request_busy:
+        tooltip(_("Wait for the current AI response to finish."))
+        return
+    from .ai_images import RegionCapture, ScreenshotQuestion, prepare_image
+    generation = _session_generation
+    try:
+        # Capture Anki's client contents before the selector/composer exists.
+        snapshot = _grab_anki_window()
+        if snapshot is None or snapshot.isNull():
+            raise ValueError(_("Anki could not capture this window."))
+        selector = _capture_dialog = RegionCapture(mw, snapshot)
+        if selector.exec() != QDialog.DialogCode.Accepted or generation != _session_generation:
+            return
+        image = selector.image
+        selector.deleteLater()
+        item = prepare_image(image)
+        text = ""
+        result = QDialog.DialogCode.Accepted
+        if compose:
+            settings = _load_settings()
+            editor = _capture_dialog = ScreenshotQuestion(
+                mw, image, settings["provider"] + " · " + settings["model"],
+            )
+            result = editor.exec()
+            text = editor.question.toPlainText().strip()
+            if result == QDialog.DialogCode.Rejected or generation != _session_generation:
+                return
+        if not show_ai_assistant():
+            return
+        draft = not compose or result == ScreenshotQuestion.SETTINGS
+        key = _add_attachment(item, draft=draft)
+        _sync_attachments()
+        if compose and not draft:
+            question = {"text": text, "images": [_attachments[key]]}
+            _when_page_ready(f"submitExternalQuestion({json.dumps(question)});")
+        else:
+            _when_page_ready(f"focusImageQuestion({json.dumps(text)});")
+            if result == ScreenshotQuestion.SETTINGS:
+                _when_page_ready("openSettings();")
+    except (ValueError, RuntimeError) as exc:
+        showWarning(str(exc), parent=mw)
+    finally:
+        if _capture_dialog is not None:
+            _capture_dialog.deleteLater()
+        _capture_dialog = None
 
 
 def _action_set_card_context(data: Dict[str, Any]) -> None:
@@ -1209,6 +1459,9 @@ def _action_set_card_context(data: Dict[str, Any]) -> None:
 
 
 def _action_chip(data: Dict[str, Any]) -> None:
+    global _request_busy
+    if _request_busy:
+        return
     action  = data.get("action", "")
     label   = data.get("label",  action.capitalize())
     content = _get_card_content()
@@ -1251,6 +1504,7 @@ def _action_chip(data: Dict[str, Any]) -> None:
     })
     request_messages = [dict(message) for message in _conversation]
     request_messages[-1]["content"] = prompt
+    _request_busy = True
     _run_api_in_thread(settings, request_messages)
 
 
@@ -1318,6 +1572,13 @@ def _action_setup_ollama(_data: Optional[Dict] = None) -> None:
 
 
 def _action_clear_history(_data: Optional[Dict] = None) -> None:
+    global _session_generation, _request_busy
+    _session_generation += 1
+    _request_busy = False
+    _attachments.clear()
+    _draft_image_ids.clear()
+    _queued_js.clear()
+    _sync_attachments()
     _reset_conversation()
     print("AI Assistant: chat history cleared")
 
@@ -1688,7 +1949,7 @@ def _update_chips() -> None:
 
 def _setup_sidebar() -> bool:
     global _dock, _webview, _profile, _hooks_connected, _dispatcher
-    global _session_generation
+    global _session_generation, _page_ready
 
     if _dock is not None:
         print("AI Assistant: sidebar already set up")
@@ -1702,6 +1963,7 @@ def _setup_sidebar() -> bool:
 
     print("AI Assistant: setting up sidebar…")
     _session_generation += 1
+    _page_ready = False
     _reset_conversation()
 
     # Create the dispatcher on the main thread so its slots run here.
@@ -1863,10 +2125,17 @@ def toggle_ai_assistant_dock() -> None:
 def cleanup_ai_assistant_sidebar() -> None:
     """Called by __init__.py on profile close / add-on unload."""
     global _dock, _webview, _profile, _hooks_connected, _dispatcher
-    global _session_generation
+    global _session_generation, _page_ready, _request_busy
 
     print("AI Assistant: cleanup starting…")
     _session_generation += 1
+    _page_ready = False
+    _request_busy = False
+    _attachments.clear()
+    _draft_image_ids.clear()
+    _queued_js.clear()
+    if _capture_dialog is not None:
+        _capture_dialog.reject()
 
     if _hooks_connected and gui_hooks:
         try:

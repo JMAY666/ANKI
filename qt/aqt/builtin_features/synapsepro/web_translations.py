@@ -361,6 +361,28 @@ def _add_rows(rows):
         WEB_TRANSLATIONS[row[0]] = dict(zip(_LANGS, row[1:]))
 
 
+_AI_IMAGE_ROWS = [
+    ("Default AI", "Standard-KI", "IA predeterminada", "기본 AI", "IA padrão", "IA par défaut", "AI mặc định", "默认 AI", "डिफ़ॉल्ट AI"),
+    ("Default AI…", "Standard-KI…", "IA predeterminada…", "기본 AI…", "IA padrão…", "IA par défaut…", "AI mặc định…", "默认 AI…", "डिफ़ॉल्ट AI…"),
+    ("Add images", "Bilder hinzufügen", "Añadir imágenes", "이미지 추가", "Adicionar imagens", "Ajouter des images", "Thêm ảnh", "添加图片", "चित्र जोड़ें"),
+    ("Screenshot question", "Screenshot-Frage", "Preguntar con captura", "스크린샷 질문", "Perguntar com captura", "Question avec capture", "Hỏi bằng ảnh chụp", "截图提问", "स्क्रीनशॉट से प्रश्न"),
+    ("Remove image", "Bild entfernen", "Eliminar imagen", "이미지 제거", "Remover imagem", "Supprimer l’image", "Xóa ảnh", "删除图片", "चित्र हटाएँ"),
+    ("Retry", "Erneut versuchen", "Reintentar", "다시 시도", "Tentar novamente", "Réessayer", "Thử lại", "重试", "फिर कोशिश करें"),
+    ("Send", "Senden", "Enviar", "보내기", "Enviar", "Envoyer", "Gửi", "发送", "भेजें"),
+    ("Ask about this image…", "Frage zu diesem Bild…", "Pregunta sobre esta imagen…", "이 이미지에 대해 질문…", "Pergunte sobre esta imagem…", "Posez une question sur cette image…", "Hỏi về ảnh này…", "输入关于这张图片的问题…", "इस चित्र के बारे में पूछें…"),
+    ("Please explain this image.", "Bitte erkläre dieses Bild.", "Explica esta imagen.", "이 이미지를 설명해 주세요.", "Explique esta imagem.", "Expliquez cette image.", "Hãy giải thích ảnh này.", "请解释这张图片。", "कृपया इस चित्र को समझाएँ।"),
+    ("Drag to capture inside Anki · Esc to cancel", "In Anki ziehen · Esc zum Abbrechen", "Arrastra dentro de Anki · Esc para cancelar", "Anki 안에서 드래그 · Esc로 취소", "Arraste dentro do Anki · Esc para cancelar", "Glissez dans Anki · Échap pour annuler", "Kéo trong Anki · Esc để hủy", "拖动框选 Anki 内的区域 · Esc 或右键取消", "Anki में क्षेत्र खींचें · Esc से रद्द करें"),
+    ("Saved provider and model are used for chat and screenshot questions.", "Gespeicherter Anbieter und Modell gelten für Chat und Screenshot-Fragen.", "El proveedor y modelo guardados se usan para chat y capturas.", "저장된 제공업체와 모델을 채팅과 스크린샷 질문에 사용합니다.", "O provedor e modelo salvos são usados no chat e nas capturas.", "Le fournisseur et le modèle enregistrés servent au chat et aux captures.", "Nhà cung cấp và mô hình đã lưu dùng cho trò chuyện và ảnh chụp.", "保存后，普通提问和截图提问都会使用此服务商与模型。图片提问需选择支持识图的模型。", "सहेजे गए प्रदाता और मॉडल का उपयोग चैट और स्क्रीनशॉट प्रश्नों में होता है।"),
+    ("Too many images. Remove an image or clear the chat first.", "Zu viele Bilder. Entferne ein Bild oder leere den Chat.", "Demasiadas imágenes. Elimina una o borra el chat.", "이미지가 너무 많습니다. 이미지를 제거하거나 채팅을 지우세요.", "Imagens demais. Remova uma imagem ou limpe o chat.", "Trop d’images. Supprimez une image ou effacez le chat.", "Quá nhiều ảnh. Xóa ảnh hoặc xóa trò chuyện trước.", "图片过多：每条问题最多 4 张。请删除附件或清空聊天后再添加。", "बहुत अधिक चित्र हैं। कोई चित्र हटाएँ या चैट साफ करें।"),
+    ("Please add the image again.", "Bitte füge das Bild erneut hinzu.", "Añade la imagen de nuevo.", "이미지를 다시 추가하세요.", "Adicione a imagem novamente.", "Ajoutez à nouveau l’image.", "Vui lòng thêm lại ảnh.", "图片已失效，请重新添加。", "कृपया चित्र फिर जोड़ें।"),
+    ("For images, select deepseek-flash or another vision model in Default AI.", "Wähle für Bilder deepseek-flash oder ein anderes Bildmodell als Standard-KI.", "Selecciona deepseek-flash u otro modelo de visión en IA predeterminada.", "기본 AI에서 deepseek-flash 또는 다른 비전 모델을 선택하세요.", "Selecione deepseek-flash ou outro modelo de visão na IA padrão.", "Choisissez deepseek-flash ou un autre modèle visuel dans IA par défaut.", "Chọn deepseek-flash hoặc mô hình thị giác khác trong AI mặc định.", "当前模型不支持图片，请在默认 AI 中选择 deepseek-flash 或其他识图模型。", "डिफ़ॉल्ट AI में deepseek-flash या अन्य विज़न मॉडल चुनें।"),
+    ("Wait for the current AI response to finish.", "Warte auf das Ende der aktuellen KI-Antwort.", "Espera a que termine la respuesta de la IA.", "현재 AI 응답이 끝날 때까지 기다리세요.", "Aguarde a resposta atual da IA terminar.", "Attendez la fin de la réponse actuelle.", "Chờ AI trả lời xong.", "请等待当前 AI 回复完成后再截图。", "वर्तमान AI उत्तर पूरा होने तक प्रतीक्षा करें।"),
+    ("Anki could not capture this window.", "Anki konnte dieses Fenster nicht aufnehmen.", "Anki no pudo capturar esta ventana.", "Anki가 이 창을 캡처할 수 없습니다.", "O Anki não conseguiu capturar esta janela.", "Anki n’a pas pu capturer cette fenêtre.", "Anki không thể chụp cửa sổ này.", "无法截取 Anki 窗口，请重试。", "Anki इस विंडो को कैप्चर नहीं कर सका।"),
+    ("The image is too large or could not be decoded.", "Das Bild ist zu groß oder nicht lesbar.", "La imagen es demasiado grande o no se puede leer.", "이미지가 너무 크거나 읽을 수 없습니다.", "A imagem é grande demais ou não pôde ser lida.", "L’image est trop grande ou illisible.", "Ảnh quá lớn hoặc không thể đọc.", "图片过大或无法读取，请使用小于 4000 万像素的有效图片。", "चित्र बहुत बड़ा है या पढ़ा नहीं जा सका।"),
+]
+AI_IMAGE_SOURCES = tuple(row[0] for row in _AI_IMAGE_ROWS)
+_add_rows(_AI_IMAGE_ROWS)
+
 # AI Assistant: interface, status text, context controls and button manager.
 _add_rows([
     ("Custom Background", "Eigener Hintergrund", "Fondo personalizado", "사용자 배경", "Fundo personalizado", "Arrière-plan personnalisé", "Nền tùy chỉnh", "自定义背景", "कस्टम पृष्ठभूमि"),

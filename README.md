@@ -13,6 +13,8 @@ Anki is a spaced repetition program. Please see the [website](https://apps.ankiw
 
 ## 内置 SynapsePro、FSRS Helper 与 Pass/Fail 2
 
+新增 **截图向 AI 提问**：点击复习底栏「截图提问」，框选 Anki 窗口内的区域，预览并输入问题后发送，自动展开右侧 AI 对话栏。聊天输入框也支持添加本地图片、粘贴图片和删除附件；「默认 AI」保存服务商与模型。图片仅保留在当前聊天内存中，使用、限制和验证见 [截图提问说明](docs/AI-IMAGE-QUESTIONS.md)。
+
 新增 **双栏复习**：从 SynapsePro 左侧快捷栏开启，两栏独立选牌组、翻面和评分，共用原调度与学习记录；支持重叠牌组避让、激活栏快捷键与音频、全局撤销、拖动栏宽和窄窗标签切换。新版启动包为 `dist/Anki-dual-review-26.8.1/Anki.exe`，操作、兼容范围和验证命令见 [双栏复习说明](docs/DUAL-REVIEW.md)。
 
 新增内置 **Minimize to Tray 2 0.2** 与 **AnkiPenDown 1.1**，入口为「SynapsePro 左侧快捷栏 → 托盘与手写」。按用户确认，默认点击 × 正常退出，可按需开启托盘隐藏；卡片手写保留双画笔、荧光笔、笔画橡皮、撤销与画布设置，设置按账户保存，菜单与控件已接入简体中文。实际使用版本更新在 `dist/Anki-dual-review-26.8.1/Anki.exe`。来源、配置兼容、验证和回退见 [托盘与手写说明](docs/DESKTOP-TOOLS.md)。

@@ -821,7 +821,7 @@ class Reviewer:
             if url == "dualReviewRefresh":
                 panel.next_card(keep=True)
                 return
-            if url in ("ans", "edit", "more") or url.startswith(
+            if url in ("ans", "edit", "more", "aiScreenshot") or url.startswith(
                 ("ease", "play:", "builtinReview:")
             ):
                 panel.owner.activate(panel)
@@ -839,7 +839,8 @@ class Reviewer:
         if command(self, url):
             return
         if (
-            url in ("ans", "edit", "more") or url.startswith(("ease", "play:"))
+            url in ("ans", "edit", "more", "aiScreenshot")
+            or url.startswith(("ease", "play:"))
         ) and not self.controls_active():
             return
         if url == "ans":
@@ -851,6 +852,12 @@ class Reviewer:
             self.mw.onEditCurrent()
         elif url == "more":
             self.showContextMenu()
+        elif url == "aiScreenshot":
+            from aqt.builtin_features.synapsepro.ai_assistant import (
+                start_screenshot_question,
+            )
+
+            start_screenshot_question()
         elif url.startswith("play:"):
             if panel := self.review_panel():
                 panel.owner.audio_owner = self
@@ -1077,14 +1084,17 @@ class Reviewer:
         from aqt.builtin_features.review_tools import render
 
         if isinstance(custom := render(self, "bottom"), str):
-            return custom
+            return custom.replace(
+                "</td>", self._screenshot_question_button() + "</td>", 1
+            )
         return """
 <center id=outer>
 <table id=innertable width=100%% cellspacing=0 cellpadding=0>
 <tr>
 <td align=start valign=top class=stat>
 %(previous)s
-<button title="%(editkey)s" onclick="pycmd('edit');">%(edit)s</button></td>
+<button title="%(editkey)s" onclick="pycmd('edit');">%(edit)s</button>
+%(screenshot)s</td>
 <td align=center valign=top id=middle>
 </td>
 <td align=end valign=top class=stat>
@@ -1102,6 +1112,7 @@ timerStopped = false;
 </script>
 """ % dict(
             previous=self._previous_card_button(),
+            screenshot=self._screenshot_question_button(),
             edit=tr.studying_edit(),
             editkey=tr.actions_shortcut_key(val="E"),
             more=tr.studying_more(),
@@ -1109,6 +1120,9 @@ timerStopped = false;
             downArrow=downArrow(),
             time=self.card.time_taken() // 1000,
         )
+
+    def _screenshot_question_button(self) -> str:
+        return '<button id="ai-screenshot" title="框选 Anki 内的图片并向 AI 提问" onclick="pycmd(\'aiScreenshot\');">截图提问</button>'
 
     @reviewer_context
     def _showAnswerButton(self) -> None:

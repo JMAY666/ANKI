@@ -6,6 +6,22 @@ mod release
 default:
     @just --list
 
+ai-images-test:
+    $env:QT_QPA_PLATFORM="offscreen"; $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_ai_images.py
+    & "out/pyenv/Scripts/python.exe" scripts/builtin_tests.py test_ai_and_removal.py
+
+ai-images-format:
+    & "out/pyenv/Scripts/ruff.exe" check --select I --fix qt/aqt/reviewer.py qt/tests/test_ai_images.py scripts/ai_images_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" format qt/aqt/reviewer.py qt/tests/test_ai_images.py scripts/ai_images_smoke.py
+    & "out/pyenv/Scripts/ruff.exe" check --no-force-exclude --select E9,F,I --fix qt/aqt/builtin_features/synapsepro/ai_images.py
+    & "out/pyenv/Scripts/ruff.exe" format --no-force-exclude qt/aqt/builtin_features/synapsepro/ai_images.py
+
+ai-images-smoke run_name:
+    $env:QT_QPA_PLATFORM="offscreen"; & "out/pyenv/Scripts/python.exe" scripts/ai_images_smoke.py {{run_name}}
+
+ai-images-native-smoke run_name:
+    $env:QT_QPA_PLATFORM="windows"; $env:ANKI_AI_NATIVE_CAPTURE="1"; & "out/pyenv/Scripts/python.exe" scripts/ai_images_smoke.py {{run_name}}
+
 review-undo-test:
     $env:PYTHONPATH="qt;pylib;out/qt;out/pylib"; & "out/pyenv/Scripts/pytest.exe" -p no:cacheprovider qt/tests/test_review_undo.py
 

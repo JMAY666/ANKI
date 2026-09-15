@@ -194,7 +194,8 @@ SURFACE_SOURCES: Dict[str, tuple[str, ...]] = {
 
 
 def sources(surface: str) -> Iterable[str]:
-    return SURFACE_SOURCES.get(surface, ())
+    from .web_translations import AI_IMAGE_SOURCES
+    return SURFACE_SOURCES.get(surface, ()) + (AI_IMAGE_SOURCES if surface == "ai" else ())
 
 
 def translations(surface: str) -> Dict[str, str]:

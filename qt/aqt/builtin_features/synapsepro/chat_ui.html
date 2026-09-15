@@ -350,6 +350,21 @@ body:not(.empty) #input-wrap{display:block}
 #input-wrap .card-context-row{margin-top:0;padding:0;flex:0 0 auto}
 #disclaimer{flex:1 1 auto;min-width:0;text-align:left;font-size:9.5px;
   line-height:1.3;color:var(--text-faint);user-select:none}
+.image-actions{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.image-action,.image-remove{background:var(--input-bg);color:var(--text);border:1px solid var(--border);
+  border-radius:7px;padding:5px 9px;font:inherit;cursor:pointer}
+.image-action:disabled,.image-remove:disabled{opacity:.4;cursor:default}
+.image-previews{display:flex;gap:8px;flex-wrap:wrap;margin:5px 0}
+.image-previews:empty{display:none}
+.image-preview{position:relative;border:1px solid var(--border);border-radius:8px;padding:4px;max-width:110px}
+.image-preview img{display:block;width:92px;height:66px;object-fit:contain}
+.image-preview span{display:block;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.image-remove{position:absolute;right:0;top:0;padding:0 5px}
+.image-error{color:var(--error);font-size:12px;white-space:pre-wrap}
+.image-error:empty{display:none}
+.message-images{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+.message-images img{max-width:100%;max-height:260px;object-fit:contain;border-radius:6px}
+textarea:disabled{opacity:.7}
 </style>
 <script>
   /* Apply dark mode BEFORE the first paint (avoids a white flash) —
@@ -394,7 +409,7 @@ body:not(.empty) #input-wrap{display:block}
   <!-- Settings panel -->
   <div id="settings-panel">
     <div class="s-row">
-      <label class="s-label">Provider</label>
+      <label class="s-label">Default AI</label>
       <select class="s-select" id="s-provider" onchange="onProviderChange()">
         <option value="openai">OpenAI</option>
         <option value="gemini">Google Gemini</option>
@@ -404,6 +419,7 @@ body:not(.empty) #input-wrap{display:block}
         <option value="ollama">Ollama (Local)</option>
         <option value="llamaserver">llama.cpp Server (Local)</option>
       </select>
+      <div class="s-hint">Saved provider and model are used for chat and screenshot questions.</div>
     </div>
     <div class="s-row" id="s-apikey-row">
       <label class="s-label">API Key</label>
@@ -535,6 +551,7 @@ body:not(.empty) #input-wrap{display:block}
 <!-- ── Empty state: centered title + big input + hint ── -->
 <div id="start-center">
   <div class="start-title">SynapseGPT</div>
+  <div class="image-previews" data-image-previews></div>
   <div id="start-input-box">
     <textarea id="start-user-input" rows="1" placeholder="Ask anything..."></textarea>
     <button id="start-send-btn" disabled>
@@ -543,6 +560,12 @@ body:not(.empty) #input-wrap{display:block}
       </svg>
     </button>
   </div>
+  <div class="image-actions">
+    <button class="image-action" onclick="sendToPython('choose_images',{})">Add images</button>
+    <button class="image-action" onclick="sendToPython('capture_image',{})">Screenshot question</button>
+    <button class="image-action" onclick="openSettings()">Default AI…</button>
+  </div>
+  <div class="image-error" data-image-error role="alert"></div>
   <div class="card-context-row" data-card-context-row>
     <button class="card-context-toggle" data-card-context-toggle type="button" aria-pressed="false" onclick="toggleCardContext()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
@@ -567,6 +590,7 @@ body:not(.empty) #input-wrap{display:block}
 
 <!-- ── Regular input (active state) ── -->
 <div id="input-wrap">
+  <div class="image-previews" data-image-previews></div>
   <div id="input-box">
     <textarea id="user-input" rows="1" placeholder="Ask a question..."></textarea>
     <button id="send-btn" disabled>
@@ -575,6 +599,12 @@ body:not(.empty) #input-wrap{display:block}
       </svg>
     </button>
   </div>
+  <div class="image-actions">
+    <button class="image-action" onclick="sendToPython('choose_images',{})">Add images</button>
+    <button class="image-action" onclick="sendToPython('capture_image',{})">Screenshot question</button>
+    <button class="image-action" onclick="openSettings()">Default AI…</button>
+  </div>
+  <div class="image-error" data-image-error role="alert"></div>
   <div class="input-meta-row">
     <div id="disclaimer">AI can make mistakes &middot; Verify important information</div>
     <div class="card-context-row" data-card-context-row>
@@ -726,6 +756,8 @@ var BUILTIN_CHIPS = [
 
 // ── State ─────────────────────────────────────────────────────────────────────
 var busy         = false;
+var attachments = [];
+var pendingSend = null;
 var chipsEnabled = false;
 var cardContextEnabled   = false;
 var cardContextAvailable = false;
@@ -868,9 +900,18 @@ document.addEventListener('DOMContentLoaded', function() {
   var inp = document.getElementById('user-input');
   inp.addEventListener('input', function() { autoResize(inp); updateSendBtn(); });
   inp.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); trySend(); }
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); trySend(); }
   });
   document.getElementById('send-btn').addEventListener('click', trySend);
+  ['user-input', 'start-user-input'].forEach(function(id) {
+    document.getElementById(id).addEventListener('paste', function(e) {
+      var items = Array.from((e.clipboardData || {}).items || []);
+      if (!busy && items.some(function(item) { return item.type.indexOf('image/') === 0; })) {
+        e.preventDefault();
+        sendToPython('paste_image', {});
+      }
+    });
+  });
 
   // Model picker: the datalist dropdown filters by the current text, so with
   // a model already selected the user had to delete it to see the full list.
@@ -893,7 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var startInp = document.getElementById('start-user-input');
   startInp.addEventListener('input', function() { autoResize(startInp); updateStartSendBtn(); });
   startInp.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); trySendFromEmpty(); }
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); trySendFromEmpty(); }
   });
   document.getElementById('start-send-btn').addEventListener('click', trySendFromEmpty);
 
@@ -1307,10 +1348,7 @@ function receiveProviderSettings(data) {
   var model = document.getElementById('s-model');
   var defaults = MODELS[data.provider] || [];
   if ((!model.value || model.value === defaults[0]) && data.model) {
-    // Other cloud providers share a legacy model key. Never suggest a model
-    // from another provider when switching into a newly configured service.
-    if (data.provider === 'deepseek' || defaults.indexOf(data.model) !== -1)
-      model.value = data.model;
+    model.value = data.model;
   }
 }
 function onProviderChange(resetModel) {
@@ -1505,32 +1543,103 @@ function _outsideInfoClick(e) {
 function trySendFromEmpty() {
   var inp  = document.getElementById('start-user-input');
   var text = inp.value.trim();
-  if (!text || busy) return;
+  if ((!text && !attachments.length) || busy) return;
   inp.value = '';
   autoResize(inp);
-  startChat();
-  addMsg('user', text);
-  setBusy(true);
-  sendToPython('send_message', {
-    text: text,
-    useCardContext: cardContextEnabled && cardContextAvailable
-  });
+  document.getElementById('user-input').value = text;
+  submitQuestion(text, attachments.slice(), true);
 }
 
 // Send from the active-state regular input
 function trySend() {
   var inp  = document.getElementById('user-input');
   var text = inp.value.trim();
-  if (!text || busy) return;
+  if ((!text && !attachments.length) || busy) return;
+  submitQuestion(text, attachments.slice(), true);
+}
+
+function submitQuestion(text, images, fromInput) {
+  if (busy) return;
+  pendingSend = {text:text, images:images, fromInput:fromInput,
+    useCardContext:fromInput && cardContextEnabled && cardContextAvailable};
   startChat();
-  addMsg('user', text);
-  inp.value = '';
-  autoResize(inp);
   setBusy(true);
+  showAttachmentError('');
   sendToPython('send_message', {
     text: text,
-    useCardContext: cardContextEnabled && cardContextAvailable
+    images: images.map(function(item) { return item.id; }),
+    useCardContext: pendingSend.useCardContext
   });
+}
+
+function submitExternalQuestion(data) {
+  submitQuestion(data.text || '', data.images || [], false);
+}
+
+function messageAccepted() {
+  if (!pendingSend) return;
+  pendingSend.row = addMsg('user', pendingSend.text || tr('Please explain this image.'), pendingSend.images);
+}
+
+function completeSend(ids) {
+  if (pendingSend && pendingSend.fromInput) {
+    var inp = document.getElementById('user-input');
+    inp.value = '';
+    autoResize(inp);
+  }
+  pendingSend = null;
+  attachments = attachments.filter(function(item) { return ids.indexOf(item.id) < 0; });
+  receiveAttachments(attachments);
+  sendToPython('release_images', {images:ids});
+}
+
+function failedSend() {
+  var failed = pendingSend;
+  pendingSend = null;
+  if (!failed || failed.fromInput) return;
+  // External screenshot questions leave an existing composer draft alone.
+  // Keep a retry beside the failed message so its image remains recoverable.
+  var row = failed.row || addMsg('user', failed.text || tr('Please explain this image.'), failed.images);
+  var retry = document.createElement('button');
+  retry.className = 'image-action';
+  retry.textContent = tr('Retry');
+  retry.onclick = function() {
+    if (busy) return;
+    retry.remove();
+    submitExternalQuestion(failed);
+  };
+  row.querySelector('.bubble').appendChild(retry);
+}
+
+function focusImageQuestion(text) {
+  var input = document.getElementById(document.body.classList.contains('empty') ? 'start-user-input' : 'user-input');
+  if (text) input.value += (input.value ? '\n' : '') + text;
+  autoResize(input);
+  input.focus();
+  updateSendBtn();
+  updateStartSendBtn();
+}
+
+function receiveAttachments(items) {
+  attachments = items;
+  document.querySelectorAll('[data-image-previews]').forEach(function(container) {
+    container.replaceChildren();
+    items.forEach(function(item) {
+      var preview = document.createElement('div'); preview.className = 'image-preview';
+      var img = document.createElement('img'); img.src = item.dataUrl; img.alt = item.name;
+      var name = document.createElement('span'); name.textContent = item.name;
+      var remove = document.createElement('button'); remove.className = 'image-remove';
+      remove.textContent = '×'; remove.title = tr('Remove image');
+      remove.setAttribute('aria-label', tr('Remove image')); remove.disabled = busy;
+      remove.onclick = function() { sendToPython('remove_image', {id:item.id}); };
+      preview.append(img, name, remove); container.appendChild(preview);
+    });
+  });
+  updateSendBtn(); updateStartSendBtn();
+}
+
+function showAttachmentError(text) {
+  document.querySelectorAll('[data-image-error]').forEach(function(el) { el.textContent = text; });
 }
 
 // ── Smart auto-scroll ─────────────────────────────────────────────────────────
@@ -1560,16 +1669,25 @@ function initChatScrollTracking() {
   }, { passive: true });
 }
 
-function addMsg(role, rawText) {
+function addMsg(role, rawText, images) {
   var chat = document.getElementById('chat');
   var row  = document.createElement('div');
   row.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
   var bub = document.createElement('div');
   bub.className = 'bubble';
   bub.innerHTML = renderMarkdown(rawText);
+  if (images && images.length) {
+    var list = document.createElement('div'); list.className = 'message-images';
+    images.forEach(function(item) {
+      var img = document.createElement('img'); img.src = item.dataUrl; img.alt = item.name;
+      list.appendChild(img);
+    });
+    bub.prepend(list);
+  }
   row.appendChild(bub);
   chat.appendChild(row);
   scrollChatToBottom(true);
+  return row;
 }
 
 // ── Streaming (called from Python) ────────────────────────────────────────────
@@ -1664,6 +1782,8 @@ function cancelStream() {
 }
 
 function receiveErrorAsChat(text) {
+  finalizeResponse();
+  failedSend();
   hideTyping();
   setBusy(false);
   startChat();
@@ -1737,6 +1857,9 @@ function hideTyping() {
 }
 
 function clearChat() {
+  pendingSend = null;
+  receiveAttachments([]);
+  showAttachmentError('');
   var chat = document.getElementById('chat');
   chat.innerHTML = '';
   _streamBubble = null;
@@ -1756,6 +1879,7 @@ function clearChat() {
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function setBusy(s) {
   busy = s;
+  document.querySelectorAll('.image-action,.image-remove,#user-input,#start-user-input').forEach(function(el) { el.disabled = s; });
   updateSendBtn();
   updateStartSendBtn();
   updateCardContextControls();
@@ -1763,12 +1887,12 @@ function setBusy(s) {
 function updateSendBtn() {
   var b = document.getElementById('send-btn');
   var i = document.getElementById('user-input');
-  b.disabled = busy || !i.value.trim();
+  b.disabled = busy || (!i.value.trim() && !attachments.length);
 }
 function updateStartSendBtn() {
   var b = document.getElementById('start-send-btn');
   var i = document.getElementById('start-user-input');
-  b.disabled = busy || !i.value.trim();
+  b.disabled = busy || (!i.value.trim() && !attachments.length);
 }
 function autoResize(el) {
   el.style.height = 'auto';
